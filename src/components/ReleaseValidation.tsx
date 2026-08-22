@@ -171,22 +171,13 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
 
               <div className="flex items-center space-x-6 self-start md:self-center">
                 <div className="text-center">
-                  <div className="text-xs text-slate-400 font-medium">Safety Score</div>
-                  <div className={`text-3xl font-black mt-1 ${
-                    currentReport.safety_score >= 90 ? 'text-emerald-400' : 'text-amber-400'
-                  }`}>
-                    {currentReport.safety_score}%
-                  </div>
-                </div>
-
-                <div className="text-center">
-                  <div className="text-xs text-slate-400 font-medium">Decision</div>
-                  <span className={`inline-block mt-1 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase ${
+                  <div className="text-xs text-slate-400 font-medium">Assurance Status</div>
+                  <span className={`inline-block mt-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase ${
                     currentReport.overall_status === 'passed'
                       ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                       : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                   }`}>
-                    {currentReport.overall_status}
+                    {currentReport.overall_status === 'passed' ? 'Safe to Release' : 'Review Required'}
                   </span>
                 </div>
               </div>
@@ -283,8 +274,7 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
                       <th className="py-2.5 px-3">Run ID</th>
                       <th className="py-2.5 px-3">Agent</th>
                       <th className="py-2.5 px-3">Version</th>
-                      <th className="py-2.5 px-3">Score</th>
-                      <th className="py-2.5 px-3">Status</th>
+                      <th className="py-2.5 px-3">Pre-Release Assessment</th>
                       <th className="py-2.5 px-3">Date</th>
                     </tr>
                   </thead>
@@ -294,12 +284,11 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
                         <td className="py-2.5 px-3 font-mono text-slate-400">{h.id}</td>
                         <td className="py-2.5 px-3 font-bold text-white">{h.agent_name || h.agent_id}</td>
                         <td className="py-2.5 px-3 font-mono">{h.version}</td>
-                        <td className="py-2.5 px-3 font-bold text-brand-400">{h.safety_score}%</td>
                         <td className="py-2.5 px-3">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
+                          <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase ${
                             h.status === 'passed' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
                           }`}>
-                            {h.status}
+                            {h.status === 'passed' ? 'Passed' : 'Review Required'}
                           </span>
                         </td>
                         <td className="py-2.5 px-3 text-slate-500 text-[11px]">

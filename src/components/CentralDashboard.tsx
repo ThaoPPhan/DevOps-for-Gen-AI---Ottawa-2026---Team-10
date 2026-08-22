@@ -8,7 +8,7 @@ import {
   Server, 
   TrendingUp, 
   ArrowRight, 
-  Clock, 
+  ShieldCheck, 
   ChevronRight, 
   Filter, 
   Check 
@@ -134,6 +134,31 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
     }
   };
 
+  const getRiskTierBadge = (agent: Agent) => {
+    const isHigh = agent.risk_score > 60 || agent.blast_radius === 'critical' || agent.status === 'at_risk';
+    const isMed = agent.risk_score > 30 || agent.blast_radius === 'high' || agent.blast_radius === 'medium';
+    
+    if (isHigh) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+          High Risk
+        </span>
+      );
+    } else if (isMed) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+          Medium Risk
+        </span>
+      );
+    } else {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+          Low Risk
+        </span>
+      );
+    }
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       
@@ -177,7 +202,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
       </div>
 
       {/* KPI Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
         
         <div className="glass-card p-5 rounded-xl border border-slate-800/80">
           <div className="flex items-center justify-between">
@@ -188,7 +213,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
             <span className="text-3xl font-extrabold text-white">
               {stats?.fleet?.total_agents ?? (agents.length || 4)}
             </span>
-            <span className="text-xs text-emerald-400 font-medium">100% Active</span>
+            <span className="text-xs text-emerald-400 font-medium">Active</span>
           </div>
           <div className="mt-2 flex items-center space-x-2 text-[11px] text-slate-400">
             <span className="text-emerald-400 font-semibold">{stats?.fleet?.protected ?? 2} Protected</span>
@@ -208,7 +233,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
             <span className="text-3xl font-extrabold text-white">
               {stats?.telemetry?.interventions_rate ?? 60}%
             </span>
-            <span className="text-xs text-slate-400 font-medium">Risky Actions Filtered</span>
+            <span className="text-xs text-slate-400 font-medium">Actions Filtered</span>
           </div>
           <div className="mt-2 text-[11px] text-slate-400">
             <span className="text-amber-400 font-semibold">{stats?.telemetry?.reviewed ?? 1} Held for Review</span>
@@ -226,24 +251,10 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
             <span className="text-3xl font-extrabold text-rose-400">
               {(incidents || []).filter(i => i.status === 'open').length || 1}
             </span>
-            <span className="text-xs text-slate-400 font-medium">Require Sign-off</span>
+            <span className="text-xs text-slate-400 font-medium">Require Action</span>
           </div>
           <div className="mt-2 text-[11px] text-slate-400">
-            <span>Automated remediation runbooks available</span>
-          </div>
-        </div>
-
-        <div className="glass-card p-5 rounded-xl border border-slate-800/80">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Average Gateway Latency</span>
-            <Clock className="w-4 h-4 text-emerald-400" />
-          </div>
-          <div className="mt-3 flex items-baseline space-x-2">
-            <span className="text-3xl font-extrabold text-emerald-400">11ms</span>
-            <span className="text-xs text-slate-400 font-medium">Edge Policy Eval</span>
-          </div>
-          <div className="mt-2 text-[11px] text-slate-400">
-            <span>Real-time in-flight interception</span>
+            <span>Remediation runbooks active</span>
           </div>
         </div>
 
@@ -322,10 +333,8 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
 
                   <div className="flex items-center space-x-3 self-end sm:self-center">
                     <div className="text-right">
-                      <div className="text-xs font-semibold text-slate-300">Risk Score</div>
-                      <div className={`text-sm font-extrabold ${agent.risk_score > 60 ? 'text-rose-400' : agent.risk_score > 35 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                        {agent.risk_score}/100
-                      </div>
+                      <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-0.5">Risk Tier</div>
+                      {getRiskTierBadge(agent)}
                     </div>
                     <button
                       onClick={() => setActiveTab('simulate')}
@@ -446,7 +455,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
                   </div>
 
                   <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-[10px] text-slate-500">
-                    <span>Latency: {evt.latency_ms}ms</span>
+                    <span className="text-slate-400">{evt.mitigation}</span>
                     <span>{new Date(evt.timestamp).toLocaleTimeString()}</span>
                   </div>
                 </div>

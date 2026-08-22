@@ -4,7 +4,6 @@ import {
   Plus, 
   Save, 
   Check, 
-  Sliders, 
   DollarSign
 } from 'lucide-react';
 import { Agent } from '../types';
@@ -27,7 +26,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
   const [editPurpose, setEditPurpose] = useState<string>('');
   const [editVersion, setEditVersion] = useState<string>('v1.0.0');
   const [editStatus, setEditStatus] = useState<'protected' | 'monitoring' | 'at_risk' | 'quarantined'>('protected');
-  const [editRiskScore, setEditRiskScore] = useState<number>(35);
+  const [editRiskTier, setEditRiskTier] = useState<string>('medium');
   const [editBlastRadius, setEditBlastRadius] = useState<'low' | 'medium' | 'high' | 'critical'>('medium');
   const [editLimit, setEditLimit] = useState<number>(5000);
   const [allowedActionsText, setAllowedActionsText] = useState<string>('');
@@ -60,7 +59,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
     setEditPurpose(agent.purpose);
     setEditVersion(agent.version);
     setEditStatus(agent.status);
-    setEditRiskScore(agent.risk_score);
+    setEditRiskTier(agent.risk_score > 60 ? 'high' : agent.risk_score > 30 ? 'medium' : 'low');
     setEditBlastRadius(agent.blast_radius);
     setEditLimit(agent.max_transaction_limit);
     setAllowedActionsText(agent.allowed_actions.join('\n'));
@@ -91,6 +90,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
     if (!selectedAgent) return;
     setSaving(true);
     try {
+      const score = editRiskTier === 'high' ? 75 : editRiskTier === 'medium' ? 45 : 15;
       const payload: Partial<Agent> = {
         id: selectedAgent.id,
         name: editName,
@@ -98,7 +98,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
         purpose: editPurpose,
         version: editVersion,
         status: editStatus,
-        risk_score: editRiskScore,
+        risk_score: score,
         blast_radius: editBlastRadius,
         max_transaction_limit: editLimit,
         allowed_actions: allowedActionsText.split('\n').map(s => s.trim()).filter(Boolean),
@@ -235,7 +235,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
                 />
               </div>
 
-              {/* Sliders & Governance Controls */}
+              {/* Governance Controls */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
                 
                 <div>
@@ -253,16 +253,15 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">Blast Radius</label>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1">Risk Tier</label>
                   <select
-                    value={editBlastRadius}
-                    onChange={(e: any) => setEditBlastRadius(e.target.value)}
+                    value={editRiskTier}
+                    onChange={(e) => setEditRiskTier(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500"
                   >
-                    <option value="low">Low (Local Read-only)</option>
-                    <option value="medium">Medium (Low Financial Limit)</option>
-                    <option value="high">High (External Payments)</option>
-                    <option value="critical">Critical (Infrastructure)</option>
+                    <option value="low">Low Risk</option>
+                    <option value="medium">Medium Risk</option>
+                    <option value="high">High Risk</option>
                   </select>
                 </div>
 

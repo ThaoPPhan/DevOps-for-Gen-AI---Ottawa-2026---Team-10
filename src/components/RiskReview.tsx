@@ -4,7 +4,6 @@ import {
   Sparkles, 
   CheckCircle2, 
   XCircle, 
-  ShieldAlert, 
   ShieldCheck, 
   ArrowRight, 
   Copy, 
@@ -111,6 +110,12 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
     setTimeout(() => setCopiedJson(false), 2000);
   };
 
+  const getRiskLabel = (score: number, radius: string) => {
+    if (score > 60 || radius === 'critical') return 'High Risk';
+    if (score > 35 || radius === 'high') return 'Medium Risk';
+    return 'Low Risk';
+  };
+
   return (
     <div className="space-y-8 animate-fade-in max-w-6xl mx-auto">
       
@@ -213,7 +218,9 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
                   {analysisResult.owner}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-1">{analysisResult.summary}</p>
+              <p className="text-xs text-slate-400 mt-1">
+                Identified {analysisResult.capabilities.filter((c: any) => c.detected).length} active capabilities and {analysisResult.risks.length} key failure modes requiring safeguard controls.
+              </p>
             </div>
 
             <div className="flex items-center space-x-6">
@@ -229,14 +236,16 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
               </div>
 
               <div className="text-center">
-                <div className="text-[11px] font-semibold text-slate-400 uppercase">Risk Score</div>
-                <div className={`text-2xl font-extrabold ${
-                  analysisResult.overall_risk_score > 60 ? 'text-rose-400' :
-                  analysisResult.overall_risk_score > 35 ? 'text-amber-400' :
-                  'text-emerald-400'
+                <div className="text-[11px] font-semibold text-slate-400 uppercase">Risk Level</div>
+                <span className={`inline-block mt-1 px-3 py-1 rounded-full text-xs font-bold uppercase ${
+                  getRiskLabel(analysisResult.overall_risk_score, analysisResult.blast_radius) === 'High Risk'
+                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                    : getRiskLabel(analysisResult.overall_risk_score, analysisResult.blast_radius) === 'Medium Risk'
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                 }`}>
-                  {analysisResult.overall_risk_score} / 100
-                </div>
+                  {getRiskLabel(analysisResult.overall_risk_score, analysisResult.blast_radius)}
+                </span>
               </div>
             </div>
           </div>

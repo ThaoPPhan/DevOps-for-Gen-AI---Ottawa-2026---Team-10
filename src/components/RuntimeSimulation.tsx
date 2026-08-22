@@ -286,11 +286,6 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
                   <Activity className="w-4 h-4 text-emerald-400 animate-pulse" />
                   <h3 className="text-base font-bold text-white">Gateway Interception Decision</h3>
                 </div>
-                {result && (
-                  <span className="text-[11px] font-medium text-slate-400">
-                    Latency: {result.latency_ms}ms
-                  </span>
-                )}
               </div>
 
               {result ? (
@@ -320,15 +315,6 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
                           {result.decision === 'REVIEW' && 'Execution held in-flight for human authorization'}
                           {result.decision === 'BLOCK' && 'Execution terminated immediately at edge'}
                         </div>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <div className="text-[10px] uppercase text-slate-400">Risk Score</div>
-                      <div className={`text-xl font-extrabold ${
-                        result.risk_score > 60 ? 'text-rose-400' : result.risk_score > 30 ? 'text-amber-400' : 'text-emerald-400'
-                      }`}>
-                        {result.risk_score}/100
                       </div>
                     </div>
                   </div>

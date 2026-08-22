@@ -3,10 +3,7 @@ import {
   Terminal, 
   Copy, 
   Check, 
-  Code2, 
-  ExternalLink,
-  ShieldCheck,
-  Send
+  Code2
 } from 'lucide-react';
 
 export const ApiDocs: React.FC = () => {
@@ -23,7 +20,7 @@ import requests
 
 def execute_safe_action(agent_id, action_name, target_resource, payload, prompt_input=""):
     """
-    Evaluates in-flight agent actions through the AgenticScale Cloudflare Edge Gateway.
+    Evaluates in-flight agent actions through the AgenticScale Gateway.
     Returns: 'ALLOW', 'REVIEW', or 'BLOCK'
     """
     url = "https://agenticscale.org/api/gateway/evaluate"
@@ -39,8 +36,8 @@ def execute_safe_action(agent_id, action_name, target_resource, payload, prompt_
     decision = result.get("decision")
     
     if decision == "ALLOW":
-        print(f"✓ [AgenticScale] Action '{action_name}' APPROVED (Latency: {result.get('latency_ms')}ms)")
-        # Proceed with actual tool execution...
+        print(f"✓ [AgenticScale] Action '{action_name}' APPROVED")
+        # Proceed with execution...
         return True
     elif decision == "REVIEW":
         print(f"⚠ [AgenticScale] Action '{action_name}' HELD FOR REVIEW: {result.get('reasons')}")
@@ -99,14 +96,11 @@ export async function evaluateAgentAction(params: {
       
       {/* Header */}
       <div>
-        <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs font-mono mb-2">
-          <span>Developer Integration & REST Endpoints</span>
-        </div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
           AgenticScale Safety Gateway API
         </h1>
-        <p className="text-slate-400 text-sm mt-1 max-w-3xl">
-          Integrate continuous safety assurance into any AI agent framework (LangChain, LlamaIndex, CrewAI, AutoGen, or custom LLM loops) with sub-15ms edge evaluation.
+        <p className="text-slate-400 text-sm mt-1.5 max-w-3xl">
+          Integrate continuous safety assurance into any AI agent framework (LangChain, LlamaIndex, CrewAI, AutoGen, or custom LLM loops).
         </p>
       </div>
 
