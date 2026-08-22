@@ -10,8 +10,7 @@ import {
   ArrowRight, 
   ChevronRight, 
   Filter, 
-  Check,
-  Radio
+  Check
 } from 'lucide-react';
 import { Agent, SafetyEvent, Incident, DashboardStats } from '../types';
 import { api } from '../services/api';
@@ -259,13 +258,13 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
 
       </div>
 
-      {/* Main Content Grid: Fleet Inventory + Live Events */}
+      {/* Main Two Columns: Fleet Inventory (6 cols) + Live Safety Events (6 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {/* Left Column: Fleet Inventory & Organizational Patterns (7 cols) */}
-        <div className="lg:col-span-7 space-y-6">
-          <div className="glass-panel p-6 rounded-2xl">
-            <div className="flex items-center justify-between mb-4">
+        {/* Left Column: Fleet Inventory (6 cols) */}
+        <div className="lg:col-span-6">
+          <div className="glass-panel p-6 rounded-2xl space-y-4">
+            <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800/80">
               <div>
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white">AI Agent Inventory</h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Governance status, owners, and operating boundaries</p>
@@ -274,12 +273,12 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
                 onClick={() => setActiveTab('profiles')}
                 className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold flex items-center space-x-1"
               >
-                <span>View All Profiles</span>
+                <span>View All</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 pt-1">
               {(agents.length > 0 ? agents : [
                 {
                   id: 'agent-invoice-01',
@@ -346,31 +345,10 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
               ))}
             </div>
           </div>
-
-          {/* Organizational Insights & Patterns */}
-          <div className="glass-panel p-6 rounded-2xl">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Organization-Wide AI Safety Patterns</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Recurring behavioral anomalies detected across multi-department agent deployments</p>
-
-            <div className="space-y-3">
-              {(stats?.organizational_patterns || DEFAULT_STATS.organizational_patterns).map((pat, idx) => (
-                <div key={idx} className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-brand-700 dark:text-brand-300">{pat.category}</span>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20">
-                      Frequency: {pat.frequency}
-                    </span>
-                  </div>
-                  <p className="text-slate-700 dark:text-slate-300 font-medium">⚠️ {pat.pattern}</p>
-                  <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold">🛡️ Safeguard: {pat.action_status}</p>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
-        {/* Right Column: Live Safety Events Telemetry Feed (5 cols) */}
-        <div className="lg:col-span-5">
+        {/* Right Column: Live Safety Events (6 cols) */}
+        <div className="lg:col-span-6">
           <div className="glass-panel p-6 rounded-2xl space-y-4">
             
             {/* Header */}
@@ -402,9 +380,9 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
               </div>
             </div>
 
-            {/* Events Cards (No awkward internal clipping) */}
-            <div className="space-y-4 pt-1">
-              {(events.length > 0 ? events.slice(0, 4) : [
+            {/* Events Cards */}
+            <div className="space-y-3.5 pt-1">
+              {(events.length > 0 ? events.slice(0, 3) : [
                 {
                   id: 'evt-1001',
                   agent_id: 'agent-invoice-01',
@@ -436,7 +414,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
               ]).map((evt) => (
                 <div
                   key={evt.id}
-                  className="p-4 rounded-xl bg-slate-50/90 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-3 hover:border-slate-300 dark:hover:border-slate-700 transition-all text-xs shadow-sm"
+                  className="p-4 rounded-xl bg-slate-50/90 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-2.5 hover:border-slate-300 dark:hover:border-slate-700 transition-all text-xs shadow-sm"
                 >
                   {/* Row 1: Agent Name & Timestamp */}
                   <div className="flex items-center justify-between gap-2">
@@ -485,7 +463,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
             </div>
 
             {/* Bottom link to Simulator */}
-            <div className="pt-2 text-center">
+            <div className="pt-1 text-center">
               <button
                 onClick={() => setActiveTab('simulate')}
                 className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold inline-flex items-center space-x-1"
@@ -498,6 +476,27 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
           </div>
         </div>
 
+      </div>
+
+      {/* Full Width: Organization-Wide AI Safety Patterns */}
+      <div className="glass-panel p-6 sm:p-8 rounded-2xl">
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Organization-Wide AI Safety Patterns</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Recurring behavioral anomalies detected across multi-department agent deployments</p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {(stats?.organizational_patterns || DEFAULT_STATS.organizational_patterns).map((pat, idx) => (
+            <div key={idx} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs space-y-2 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-brand-700 dark:text-brand-300 text-sm">{pat.category}</span>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20">
+                  Frequency: {pat.frequency}
+                </span>
+              </div>
+              <p className="text-slate-700 dark:text-slate-300 font-medium">⚠️ {pat.pattern}</p>
+              <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold">🛡️ Safeguard: {pat.action_status}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Open Incidents Drawer / Section */}
