@@ -11,6 +11,7 @@ import {
   SlidersHorizontal,
   Sun,
   Moon,
+  LogIn,
   LogOut
 } from 'lucide-react';
 import { AuthSession } from '../types';
@@ -20,11 +21,12 @@ interface NavbarProps {
   setActiveTab: (tab: string) => void;
   isDark: boolean;
   setIsDark: (dark: boolean) => void;
-  session: AuthSession;
+  session: AuthSession | null;
+  onSignIn: () => void;
   onSignOut: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isDark, setIsDark, session, onSignOut }) => {
+export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isDark, setIsDark, session, onSignIn, onSignOut }) => {
   const [showUserMenu, setShowUserMenu] = React.useState(false);
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Activity },
@@ -82,16 +84,18 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isDark,
             <div className="hidden xl:block w-px h-5 bg-slate-200 dark:bg-slate-800 mx-1"></div>
 
             <div className="relative">
-              <button type="button" onClick={() => setShowUserMenu((visible) => !visible)} className="h-9 w-9 sm:h-auto sm:w-auto sm:max-w-[180px] rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 text-left text-[11px] font-semibold text-emerald-800 transition-all hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300" aria-expanded={showUserMenu} aria-label="Open account menu">
-                <span className="block text-center sm:hidden">{(session.user?.name || session.user?.email || 'S').slice(0, 1).toUpperCase()}</span>
-                <span className="hidden truncate sm:block">{session.user?.name || session.user?.email || 'Signed in'}</span>
-                <span className="hidden truncate text-[10px] font-normal opacity-75 sm:block">{session.organization?.name || 'Organization'} · {session.organization?.role || 'member'}</span>
-              </button>
-              {showUserMenu && <div className="absolute right-0 top-11 z-50 w-64 rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-                <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{session.user?.email}</p>
-                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{session.organization?.name}</p>
-                <button type="button" onClick={onSignOut} className="mt-3 flex w-full items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><LogOut className="h-3.5 w-3.5" />Sign out</button>
-              </div>}
+              {session?.authenticated ? <>
+                <button type="button" onClick={() => setShowUserMenu((visible) => !visible)} className="h-9 w-9 sm:h-auto sm:w-auto sm:max-w-[180px] rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 text-left text-[11px] font-semibold text-emerald-800 transition-all hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300" aria-expanded={showUserMenu} aria-label="Open account menu">
+                  <span className="block text-center sm:hidden">{(session.user?.name || session.user?.email || 'S').slice(0, 1).toUpperCase()}</span>
+                  <span className="hidden truncate sm:block">{session.user?.name || session.user?.email || 'Signed in'}</span>
+                  <span className="hidden truncate text-[10px] font-normal opacity-75 sm:block">{session.organization?.name || 'Organization'} · {session.organization?.role || 'member'}</span>
+                </button>
+                {showUserMenu && <div className="absolute right-0 top-11 z-50 w-64 rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                  <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{session.user?.email}</p>
+                  <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{session.organization?.name}</p>
+                  <button type="button" onClick={onSignOut} className="mt-3 flex w-full items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><LogOut className="h-3.5 w-3.5" />Sign out</button>
+                </div>}
+              </> : <button type="button" onClick={onSignIn} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand-600 px-3 text-xs font-bold text-white shadow-sm transition hover:bg-brand-500" aria-label="Sign in to AgenticScale"><LogIn className="h-3.5 w-3.5" /><span>Sign in</span></button>}
             </div>
             <button
               onClick={() => setIsDark(!isDark)}
