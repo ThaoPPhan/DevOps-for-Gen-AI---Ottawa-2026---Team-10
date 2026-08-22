@@ -60,7 +60,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isDark,
 
           {/* Right-Aligned Menu Navigation + Theme Toggle */}
           <div className="flex items-center space-x-2">
-            <nav className="hidden lg:flex items-center space-x-1">
+            <nav className="hidden xl:flex items-center space-x-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
@@ -82,7 +82,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isDark,
               })}
             </nav>
 
-            <div className="hidden lg:block w-px h-5 bg-slate-200 dark:bg-slate-800 mx-1"></div>
+            <div className="hidden xl:block w-px h-5 bg-slate-200 dark:bg-slate-800 mx-1"></div>
 
             {/* Theme Toggle */}
             {adminConfigured && <button
@@ -113,7 +113,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isDark,
       </div>
 
       {/* Mobile nav */}
-      <div className="lg:hidden flex overflow-x-auto px-4 py-2 space-x-1.5 bg-slate-100/90 dark:bg-slate-900/90 border-t border-slate-200 dark:border-slate-800 scrollbar-none">
+      <div className="xl:hidden flex overflow-x-auto px-4 py-2 space-x-1.5 bg-slate-100/90 dark:bg-slate-900/90 border-t border-slate-200 dark:border-slate-800 scrollbar-none">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;

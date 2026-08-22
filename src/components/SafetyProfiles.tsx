@@ -277,13 +277,13 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
           {selectedAgent ? (
             <div className="glass-panel p-6 sm:p-8 rounded-2xl space-y-6">
               
-              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+              <div className="flex flex-col items-start gap-3 border-b border-slate-200 pb-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">Edit profile: {editName}</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">{editOwner} · {editVersion}</p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
                   {agents.some((agent) => agent.id === selectedAgent.id) && <button
                     type="button"
                     onClick={handleArchive}
