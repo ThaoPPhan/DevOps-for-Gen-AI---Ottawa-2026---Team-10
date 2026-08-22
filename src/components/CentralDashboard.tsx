@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Agent, SafetyEvent, Incident, DashboardStats } from '../types';
 import { api } from '../services/api';
+import { WorkflowGuide } from './WorkflowGuide';
 
 interface DashboardProps {
   setActiveTab: (tab: string) => void;
@@ -259,6 +260,8 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
         </div>
 
       </div>
+
+      <WorkflowGuide setActiveTab={setActiveTab} />
 
       {/* Main Two Columns: Fleet Inventory (6 cols) + Live Safety Events (6 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">

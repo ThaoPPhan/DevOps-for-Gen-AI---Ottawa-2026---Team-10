@@ -26,6 +26,27 @@ pre,
   overflow-wrap: anywhere;
 }
 
+@keyframes workflow-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(14, 142, 233, 0.04);
+    transform: translateY(0);
+  }
+  50% {
+    box-shadow: 0 8px 24px -14px rgba(14, 142, 233, 0.55);
+    transform: translateY(-2px);
+  }
+}
+
+.workflow-active {
+  animation: workflow-glow 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workflow-active {
+    animation: none;
+  }
+}
+
 code, pre {
   font-family: 'JetBrains Mono', monospace;
 }
