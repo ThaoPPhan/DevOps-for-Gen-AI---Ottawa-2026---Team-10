@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   ArrowRight,
+  ChevronRight,
   CheckCircle2,
   PlayCircle,
   Search,
@@ -67,7 +68,7 @@ export const WorkflowGuide: React.FC<WorkflowGuideProps> = ({ setActiveTab }) =>
 
       <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
         <div className="min-w-0 lg:col-span-8">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
             {workflowSteps.map((step, index) => {
               const Icon = step.icon;
               const isActive = index === activeStep;
@@ -85,7 +86,15 @@ export const WorkflowGuide: React.FC<WorkflowGuideProps> = ({ setActiveTab }) =>
                       <span className="whitespace-normal text-xs font-bold leading-tight text-slate-900 dark:text-white">{step.title}</span>
                     </div>
                     <p className="mt-3 text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">{step.summary}</p>
-                    {index < workflowSteps.length - 1 && <ArrowRight className="absolute -right-3 top-1/2 z-10 hidden h-4 w-4 -translate-y-1/2 text-slate-300 dark:text-slate-700 lg:block" aria-hidden="true" />}
+                    {index < workflowSteps.length - 1 && (
+                      <span
+                        className={`pointer-events-none absolute -right-5 top-1/2 z-20 hidden w-5 -translate-y-1/2 items-center lg:flex ${index < activeStep ? 'text-brand-300 dark:text-brand-700' : 'text-slate-300 dark:text-slate-700'}`}
+                        aria-hidden="true"
+                      >
+                        <span className={`h-px flex-1 ${index < activeStep ? 'bg-brand-200 dark:bg-brand-800' : 'bg-slate-200 dark:bg-slate-700'}`} />
+                        <ChevronRight className="h-4 w-4 shrink-0" />
+                      </span>
+                    )}
                   </button>
               );
             })}
