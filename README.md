@@ -21,6 +21,7 @@ Organizations are rapidly creating AI agents with autonomous authority to read i
 3. **Validate agent behavior** before authorizing production release (`/validate`).
 4. **Monitor runtime actions** and intercept unsafe operations in-flight (`/simulate` with `ALLOW`, `REVIEW`, `BLOCK`).
 5. **Maintain fleet visibility** and discover recurring cross-team failure patterns (`/dashboard`).
+6. **Manage configurable policy switches** while preserving mandatory administrative safeguards (`/policies`).
 
 ---
 
@@ -84,6 +85,11 @@ graph TD
 - D1-backed Safety Events telemetry with search and filters (ALLOW, REVIEW, BLOCK, agent).
 - Organization-level recurring failure patterns and active posture recommendations.
 - Open incident resolution drawer.
+
+### 6. Module 6: Safety Policy Registry (`/policies`)
+- Review seeded policy expressions, severity, default action, and remediation guidance.
+- Enable or disable configurable financial, vendor, prompt-injection, and DLP policies from the authenticated console.
+- The administrative-compromise policy is immutable and always enforced.
 
 ---
 
@@ -153,7 +159,7 @@ npx wrangler secret put GATEWAY_API_KEY
 npx wrangler secret put ALERT_WEBHOOK_URL
 ```
 
-The dashboard is readable without a login for demonstration purposes. Profile writes, validation runs, profile archival, and incident decisions require an authenticated `ADMIN_API_KEY` entered through the session-only Admin Access control. External gateway callers require `GATEWAY_API_KEY`. Configure both production secrets before using the console for real operational data.
+The dashboard is readable without a login for demonstration purposes. Profile writes, validation runs, profile archival/restoration, and incident decisions require an authenticated `ADMIN_API_KEY` entered through the session-only Admin Access control; the console verifies the key before marking the session active. External gateway callers require `GATEWAY_API_KEY`. Configure both production secrets before using the console for real operational data.
 
 ### Python Example
 ```python
@@ -210,4 +216,5 @@ MIT License. Built for the DevOps for GenAI Hackathon 2026.
 - Agent promotion/deployment remains a human-controlled external step; the validation console records governance evidence but does not deploy an agent.
 - The dashboard refreshes D1 telemetry on a short polling interval. It is not a WebSocket stream.
 - Notifications are optional and require `ALERT_WEBHOOK_URL`; no Slack, PagerDuty, SIEM, or EventBridge integration is bundled by default.
+- Archived profiles can be restored from the Profiles console; archival preserves their history and removes them from the active fleet.
 - API mutations are protected by the admin key in production. Use Cloudflare Access or an identity provider before exposing this to multiple organizations.

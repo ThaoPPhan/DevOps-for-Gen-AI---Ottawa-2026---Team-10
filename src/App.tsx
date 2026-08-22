@@ -7,8 +7,9 @@ import { ReleaseValidation } from './components/ReleaseValidation';
 import { RuntimeSimulation } from './components/RuntimeSimulation';
 import { EnterpriseArch } from './components/EnterpriseArch';
 import { ApiDocs } from './components/ApiDocs';
+import { PolicyRegistry } from './components/PolicyRegistry';
 import { ShieldCheck, AlertTriangle, RefreshCw } from 'lucide-react';
-import { getAdminKey, setAdminKey } from './services/api';
+import { api, clearAdminKey, getAdminKey, setAdminKey } from './services/api';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -73,7 +74,8 @@ export function App() {
     '/validate': 'validate',
     '/simulate': 'simulate',
     '/enterprise': 'enterprise',
-    '/api-docs': 'api'
+    '/api-docs': 'api',
+    '/policies': 'policies'
   };
   const tabToRoute: Record<string, string> = {
     dashboard: '/',
@@ -82,10 +84,12 @@ export function App() {
     validate: '/validate',
     simulate: '/simulate',
     enterprise: '/enterprise',
-    api: '/api-docs'
+    api: '/api-docs',
+    policies: '/policies'
   };
   const [activeTab, setActiveTabState] = useState<string>(() => routeToTab[window.location.pathname] || 'dashboard');
   const [adminKey, setAdminKeyState] = useState<string>(() => getAdminKey());
+  const [adminKeyStatus, setAdminKeyStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
   const [isDark, setIsDark] = useState<boolean>(() => {
     const stored = localStorage.getItem('agenticscale_theme');
     return stored === 'dark';
@@ -106,6 +110,24 @@ export function App() {
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    if (!adminKey) {
+      setAdminKeyStatus('idle');
+      return () => { active = false; };
+    }
+    setAdminKeyStatus('checking');
+    api.verifyAdminKey()
+      .then(() => { if (active) setAdminKeyStatus('valid'); })
+      .catch(() => {
+        if (!active) return;
+        clearAdminKey();
+        setAdminKeyState('');
+        setAdminKeyStatus('invalid');
+      });
+    return () => { active = false; };
+  }, [adminKey]);
 
   const setActiveTab = (tab: string) => {
     const nextPath = tabToRoute[tab] || '/';
@@ -130,6 +152,7 @@ export function App() {
           isDark={isDark}
           setIsDark={setIsDark}
           adminAuthenticated={Boolean(adminKey)}
+          adminKeyStatus={adminKeyStatus}
           onAdminKeyChange={handleAdminKey}
         />
 
@@ -142,6 +165,7 @@ export function App() {
           {activeTab === 'simulate' && <RuntimeSimulation setActiveTab={setActiveTab} />}
           {activeTab === 'enterprise' && <EnterpriseArch />}
           {activeTab === 'api' && <ApiDocs />}
+          {activeTab === 'policies' && <PolicyRegistry />}
         </main>
 
         {/* Minimal Clean Footer */}

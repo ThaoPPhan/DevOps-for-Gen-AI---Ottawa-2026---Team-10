@@ -118,7 +118,7 @@ export async function evaluateAgentAction(params: {
           External gateway callers must send <code className="font-mono">X-AgenticScale-Key</code> using the configured <code className="font-mono">GATEWAY_API_KEY</code>. Admin profile, validation, and incident actions require <code className="font-mono">ADMIN_API_KEY</code>.
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
-          Available endpoints: <code className="font-mono">POST /api/review</code>, <code className="font-mono">GET/POST /api/agents</code>, <code className="font-mono">POST /api/validate</code>, <code className="font-mono">POST /api/gateway/evaluate</code>, <code className="font-mono">GET /api/events</code>, and <code className="font-mono">GET /api/incidents</code>.
+          Available endpoints: <code className="font-mono">POST /api/review</code>, <code className="font-mono">GET/POST /api/agents</code>, <code className="font-mono">POST /api/validate</code>, <code className="font-mono">POST /api/validate/:id/release</code>, <code className="font-mono">POST /api/gateway/evaluate</code>, <code className="font-mono">GET /api/events</code>, and <code className="font-mono">GET /api/incidents</code>. Admin sessions can verify with <code className="font-mono">POST /api/auth/admin</code> and restore archived profiles with <code className="font-mono">POST /api/agents/:id/restore</code>.
         </div>
       </div>
 

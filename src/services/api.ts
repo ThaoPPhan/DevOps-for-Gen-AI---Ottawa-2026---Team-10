@@ -92,7 +92,12 @@ export const api = {
     body: JSON.stringify({ description, agent_name: agentName, owner })
   }),
 
-  getAgents: () => requestJson<Agent[]>('/agents'),
+  verifyAdminKey: () => requestJson<{ authenticated: boolean; message: string }>('/auth/admin', {
+    method: 'POST',
+    body: JSON.stringify({})
+  }),
+
+  getAgents: (options?: { includeArchived?: boolean }) => requestJson<Agent[]>(`/agents${options?.includeArchived ? '?include_archived=true' : ''}`),
 
   saveAgent: (agentData: Partial<Agent>) => requestJson<{ success: boolean; id: string }>('/agents', {
     method: 'POST',
@@ -106,7 +111,17 @@ export const api = {
     body: JSON.stringify({})
   }),
 
+  restoreAgent: (agentId: string) => requestJson<{ success: boolean }>(`/agents/${encodeURIComponent(agentId)}/restore`, {
+    method: 'POST',
+    body: JSON.stringify({})
+  }),
+
   getPolicies: () => requestJson<Policy[]>('/policies'),
+
+  updatePolicy: (policyId: string, enabled: boolean) => requestJson<{ success: boolean; id: string; is_enabled: boolean }>(`/policies/${encodeURIComponent(policyId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ is_enabled: enabled })
+  }),
 
   validateAgent: (agentId: string, agentName: string, version: string) => requestJson('/validate', {
     method: 'POST',

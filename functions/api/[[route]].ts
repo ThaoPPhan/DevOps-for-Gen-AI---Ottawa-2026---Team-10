@@ -170,6 +170,11 @@ function toAgentContext(row: any): AgentContext {
   } as AgentContext;
 }
 
+async function getDisabledPolicyIds(env: Env): Promise<string[]> {
+  const { results } = await env.DB.prepare('SELECT id FROM safety_policies WHERE is_enabled = 0').all<{ id: string }>();
+  return results.map((row) => row.id);
+}
+
 async function consumeRateLimit(env: Env, agentId: string): Promise<boolean> {
   if (!env.AGENTICSCALE_KV) return true;
   const bucket = Math.floor(Date.now() / 60_000);
@@ -197,7 +202,7 @@ function addSecurityHeaders(c: any, origin: string | undefined): void {
   if (origin) {
     c.header('Access-Control-Allow-Origin', origin);
     c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-AgenticScale-Key');
-    c.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    c.header('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
     c.header('Vary', 'Origin');
   }
 }
@@ -241,6 +246,12 @@ app.get('/api/health', async (c) => {
   }
 });
 
+app.post('/api/auth/admin', async (c) => {
+  const denied = requireAccess(c, c.env.ADMIN_API_KEY, 'Admin', false);
+  if (denied) return denied;
+  return c.json({ authenticated: true, message: 'Admin API key verified for this session.' });
+});
+
 app.post('/api/review', async (c) => {
   try {
     const body = await readJsonObject(c);
@@ -258,7 +269,8 @@ app.get('/api/agents', async (c) => {
   if (denied) return denied;
 
   try {
-    const { results } = await c.env.DB.prepare('SELECT * FROM agents WHERE archived_at IS NULL ORDER BY created_at DESC').all();
+    const includeArchived = c.req.query('include_archived') === 'true';
+    const { results } = await c.env.DB.prepare(`SELECT * FROM agents ${includeArchived ? '' : 'WHERE archived_at IS NULL'} ORDER BY created_at DESC`).all();
     return c.json(results.map((row: any) => ({
       ...row,
       allowed_actions: parseJsonArrayOfStrings(row.allowed_actions),
@@ -399,16 +411,47 @@ app.post('/api/agents/:id/archive', async (c) => {
   }
 });
 
+app.post('/api/agents/:id/restore', async (c) => {
+  const denied = requireAccess(c, c.env.ADMIN_API_KEY, 'Agent restore', false);
+  if (denied) return denied;
+  try {
+    const result = await c.env.DB.prepare('UPDATE agents SET archived_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND archived_at IS NOT NULL').bind(c.req.param('id')).run();
+    if (!result.meta.changes) return c.json({ error: 'Archived agent not found.' }, 404);
+    return c.json({ success: true, message: 'Agent profile restored to the active fleet.' });
+  } catch (error) {
+    console.error(JSON.stringify({ event: 'agent_restore_failed', error: String(error) }));
+    return c.json({ error: 'Unable to restore agent profile.' }, 503);
+  }
+});
+
 app.get('/api/policies', async (c) => {
   const denied = requireAccess(c, c.env.ADMIN_API_KEY, 'Policy registry');
   if (denied) return denied;
 
   try {
     const { results } = await c.env.DB.prepare('SELECT * FROM safety_policies ORDER BY severity DESC, id ASC').all();
-    return c.json(results);
+    return c.json(results.map((row: any) => ({ ...row, is_mutable: row.id !== 'pol-adm-001' })));
   } catch (error) {
     console.error(JSON.stringify({ event: 'policy_read_failed', error: String(error) }));
     return c.json({ error: 'Policy registry is unavailable.' }, 503);
+  }
+});
+
+app.patch('/api/policies/:id', async (c) => {
+  const denied = requireAccess(c, c.env.ADMIN_API_KEY, 'Policy management', false);
+  if (denied) return denied;
+  try {
+    const policyId = c.req.param('id');
+    if (policyId === 'pol-adm-001') return c.json({ error: 'The administrative-compromise policy is mandatory and cannot be disabled.' }, 422);
+    const body = await readJsonObject(c);
+    const enabled = body.is_enabled;
+    if (enabled !== true && enabled !== false && enabled !== 0 && enabled !== 1) return c.json({ error: 'is_enabled must be a boolean.' }, 422);
+    const result = await c.env.DB.prepare('UPDATE safety_policies SET is_enabled = ? WHERE id = ?').bind(enabled === true || enabled === 1 ? 1 : 0, policyId).run();
+    if (!result.meta.changes) return c.json({ error: 'Policy not found.' }, 404);
+    return c.json({ success: true, id: policyId, is_enabled: enabled === true || enabled === 1 });
+  } catch (error) {
+    console.error(JSON.stringify({ event: 'policy_update_failed', error: String(error) }));
+    return jsonError(c, error instanceof Error ? error.message : 'Unable to update policy.', 422);
   }
 });
 
@@ -423,7 +466,7 @@ app.post('/api/validate', async (c) => {
     const rawAgent: any = await c.env.DB.prepare('SELECT * FROM agents WHERE id = ?').bind(agentId).first();
     if (!rawAgent) return c.json({ error: 'Agent not found.' }, 404);
 
-    const agent = toAgentContext(rawAgent);
+    const agent = { ...toAgentContext(rawAgent), disabled_policy_ids: await getDisabledPolicyIds(c.env) };
     const agentName = stringField(body, 'agent_name', false, 200) || agent.name;
     const report = runSafetyValidationSuite(agentId, agentName, version, agent);
 
@@ -532,7 +575,7 @@ app.post('/api/gateway/evaluate', async (c) => {
 
     const rawAgent: any = await c.env.DB.prepare('SELECT * FROM agents WHERE id = ? AND archived_at IS NULL').bind(agentId).first();
     if (!rawAgent) return c.json({ error: 'Unknown agent. Register a safety profile before evaluating actions.' }, 404);
-    const agent = toAgentContext(rawAgent);
+    const agent = { ...toAgentContext(rawAgent), disabled_policy_ids: await getDisabledPolicyIds(c.env) };
 
     let evaluation = evaluateAgentAction({
       agent_id: agentId,

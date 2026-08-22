@@ -15,6 +15,7 @@ export interface AgentContext {
   max_transaction_limit: number;
   risk_categories?: string[];
   monitoring_requirements?: string[];
+  disabled_policy_ids?: string[];
 }
 
 export interface EvaluateRequest {
@@ -156,7 +157,8 @@ export function evaluateAgentAction(request: EvaluateRequest, agent?: AgentConte
   }
 
   const matchedInjection = INJECTION_PATTERNS.some((pattern) => pattern.test(payloadString));
-  if (matchedInjection || payload.contains_injection_pattern === true || payload.instruction_override === true) {
+  const injectionPolicyEnabled = !agent.disabled_policy_ids?.includes('pol-sec-001');
+  if (injectionPolicyEnabled && (matchedInjection || payload.contains_injection_pattern === true || payload.instruction_override === true)) {
     return result(
       startTime,
       'BLOCK',
@@ -218,7 +220,8 @@ export function evaluateAgentAction(request: EvaluateRequest, agent?: AgentConte
 
   const egressAction = /^(send|export|upload|notify|webhook|post)/i.test(action) || action === 'send_external_email';
   const matchedPii = egressAction && PII_PATTERNS.some((pattern) => pattern.test(payloadString));
-  if (matchedPii || (action === 'send_external_email' && payload.contains_unredacted_pii === true)) {
+  const dlpPolicyEnabled = !agent.disabled_policy_ids?.includes('pol-dlp-001');
+  if (dlpPolicyEnabled && (matchedPii || (action === 'send_external_email' && payload.contains_unredacted_pii === true))) {
     return result(
       startTime,
       'BLOCK',
@@ -243,14 +246,19 @@ export function evaluateAgentAction(request: EvaluateRequest, agent?: AgentConte
   const isVendorAccountChange = action === 'update_vendor_account' || payload.vendor_account_changed === true || payload.is_new_bank_account === true;
   const isUrgentExternalRequest = payload.is_urgent_external_source === true || /bank account changed|update immediately|urgent supplier/i.test(payloadString);
   const isHighValuePayment = action === 'send_payment' && safeAmount > maxLimit;
+  const financialPolicyEnabled = !agent.disabled_policy_ids?.includes('pol-fin-001');
+  const vendorPolicyEnabled = !agent.disabled_policy_ids?.includes('pol-fin-002');
+  const requiresFinancialReview = financialPolicyEnabled && isHighValuePayment;
+  const requiresVendorReview = vendorPolicyEnabled && isVendorAccountChange;
+  const requiresUrgencyReview = vendorPolicyEnabled && isUrgentExternalRequest;
 
-  if (isVendorAccountChange || isHighValuePayment || isUrgentExternalRequest) {
+  if (requiresVendorReview || requiresFinancialReview || requiresUrgencyReview) {
     const reasons: string[] = [];
-    if (isHighValuePayment) {
+    if (requiresFinancialReview) {
       reasons.push(`High Financial Impact: Transaction amount ($${safeAmount.toLocaleString()}) exceeds the authorized threshold ($${maxLimit.toLocaleString()}).`);
     }
-    if (isVendorAccountChange) reasons.push('Vendor Banking Mutation: Bank routing/account details require out-of-band dual-control verification.');
-    if (isUrgentExternalRequest) reasons.push('Untrusted External Ingress: Request contains urgency cues from an unverified source.');
+    if (requiresVendorReview) reasons.push('Vendor Banking Mutation: Bank routing/account details require out-of-band dual-control verification.');
+    if (requiresUrgencyReview) reasons.push('Untrusted External Ingress: Request contains urgency cues from an unverified source.');
 
     return result(
       startTime,

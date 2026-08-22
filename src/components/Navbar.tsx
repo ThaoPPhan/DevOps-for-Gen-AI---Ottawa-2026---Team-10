@@ -8,6 +8,7 @@ import {
   PlaySquare, 
   Layers, 
   Terminal,
+  SlidersHorizontal,
   Sun,
   Moon,
   KeyRound,
@@ -20,10 +21,11 @@ interface NavbarProps {
   isDark: boolean;
   setIsDark: (dark: boolean) => void;
   adminAuthenticated: boolean;
+  adminKeyStatus: 'idle' | 'checking' | 'valid' | 'invalid';
   onAdminKeyChange: (key: string) => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isDark, setIsDark, adminAuthenticated, onAdminKeyChange }) => {
+export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isDark, setIsDark, adminAuthenticated, adminKeyStatus, onAdminKeyChange }) => {
   const [showAdminAccess, setShowAdminAccess] = React.useState(false);
   const [draftKey, setDraftKey] = React.useState('');
   const navItems = [
@@ -34,6 +36,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isDark,
     { id: 'simulate', label: 'Simulator', icon: PlaySquare },
     { id: 'enterprise', label: 'Enterprise', icon: Layers },
     { id: 'api', label: 'API Docs', icon: Terminal },
+    { id: 'policies', label: 'Policies', icon: SlidersHorizontal },
   ];
 
   return (
@@ -89,7 +92,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isDark,
               title={adminAuthenticated ? 'Admin access active' : 'Admin access required for profile and incident changes'}
             >
               <KeyRound className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{adminAuthenticated ? 'Admin' : 'Access'}</span>
+              <span className="hidden sm:inline">{adminKeyStatus === 'checking' ? 'Checking…' : adminAuthenticated ? 'Admin' : 'Access'}</span>
             </button>
             <button
               onClick={() => setIsDark(!isDark)}
@@ -156,6 +159,8 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isDark,
               {adminAuthenticated && <button type="button" onClick={() => { onAdminKeyChange(''); setDraftKey(''); setShowAdminAccess(false); }} className="px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-1.5"><LogOut className="w-3.5 h-3.5" />Sign out</button>}
               <button type="button" onClick={() => { onAdminKeyChange(draftKey); setDraftKey(''); setShowAdminAccess(false); }} className="px-4 py-2 rounded-lg text-xs font-bold bg-brand-600 text-white hover:bg-brand-500">Save access key</button>
             </div>
+            {adminKeyStatus === 'invalid' && <p role="alert" className="text-xs text-rose-700 dark:text-rose-300">That key could not be verified. Check the Cloudflare secret and try again.</p>}
+            {adminKeyStatus === 'valid' && <p className="text-xs text-emerald-700 dark:text-emerald-300">Admin key verified for this browser session.</p>}
           </div>
         </div>
       )}

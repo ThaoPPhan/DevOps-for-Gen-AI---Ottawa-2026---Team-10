@@ -17,6 +17,7 @@ interface ProfilesProps {
 
 export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [archivedAgents, setArchivedAgents] = useState<Agent[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,9 +56,12 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.getAgents();
-      setAgents(data);
-      const refreshedSelection = selectedAgent ? data.find((agent) => agent.id === selectedAgent.id) : data[0];
+      const data = await api.getAgents({ includeArchived: true });
+      const activeAgents = data.filter((agent) => !agent.archived_at);
+      const archived = data.filter((agent) => Boolean(agent.archived_at));
+      setAgents(activeAgents);
+      setArchivedAgents(archived);
+      const refreshedSelection = selectedAgent ? activeAgents.find((agent) => agent.id === selectedAgent.id) : activeAgents[0];
       if (refreshedSelection) {
         setSelectedAgent(refreshedSelection);
         if (!selectedAgent) {
@@ -165,6 +169,20 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
     }
   };
 
+  const handleRestore = async (agent: Agent) => {
+    setSaving(true);
+    setError(null);
+    try {
+      await api.restoreAgent(agent.id);
+      await loadAgents();
+      selectAgentForEdit({ ...agent, archived_at: null });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to restore the profile.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-fade-in max-w-6xl mx-auto">
       
@@ -240,6 +258,19 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
               </button>
             ))}
           </div>
+
+          {archivedAgents.length > 0 && <div className="mt-6 space-y-2">
+            <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Archived Profiles</h2>
+            {archivedAgents.map((agent) => <div key={agent.id} className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-3 text-xs">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-bold text-slate-700 dark:text-slate-300">{agent.name}</div>
+                  <div className="text-[10px] text-slate-500 mt-1">Archived {agent.archived_at ? new Date(agent.archived_at).toLocaleString() : ''}</div>
+                </div>
+                <button type="button" onClick={() => handleRestore(agent)} disabled={saving} className="shrink-0 rounded-lg border border-emerald-200 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 dark:border-emerald-900/50 dark:text-emerald-300 dark:hover:bg-emerald-950/30">Restore</button>
+              </div>
+            </div>)}
+          </div>}
         </div>
 
         {/* Right: Active Profile Editor (8 cols) */}

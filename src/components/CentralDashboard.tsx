@@ -40,6 +40,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
   const [searchEvents, setSearchEvents] = useState<string>('');
   const [filterAgentId, setFilterAgentId] = useState<string>('');
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [incidentNotes, setIncidentNotes] = useState<Record<string, string>>({});
 
   const loadData = async () => {
     setLoading(true);
@@ -74,7 +75,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
     setResolvingId(id);
     setActionError(null);
     try {
-      await api.incidentAction(id, action);
+      await api.incidentAction(id, action, incidentNotes[id]);
       await loadData();
     } catch (err) {
       console.error('Failed to resolve incident:', err);
@@ -507,6 +508,8 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
                   </>}
                   {inc.decision !== 'REVIEW' && <button onClick={() => handleIncidentAction(inc.id, 'resolve')} disabled={resolvingId === inc.id} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5"><Check className="w-3.5 h-3.5" />Resolve</button>}
                 </div>
+                <label htmlFor={`incident-note-${inc.id}`} className="sr-only">Decision note for {inc.title}</label>
+                <textarea id={`incident-note-${inc.id}`} value={incidentNotes[inc.id] || ''} onChange={(event) => setIncidentNotes((previous) => ({ ...previous, [inc.id]: event.target.value }))} rows={2} placeholder="Optional decision note for the audit trail" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-900 dark:border-slate-800 dark:bg-slate-950/60 dark:text-white" />
                 {inc.decision === 'REVIEW' && <p className="text-[10px] text-slate-500 dark:text-slate-400 text-right">Approval records the decision; it does not replay the held action.</p>}
               </div>
             ))}

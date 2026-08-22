@@ -28,6 +28,7 @@ export interface Policy {
   rule_expression: string;
   remediation_guidance: string;
   is_enabled: number;
+  is_mutable?: boolean;
 }
 
 export interface SafetyEvent {
