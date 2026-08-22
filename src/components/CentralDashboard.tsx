@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ShieldAlert, 
   CheckCircle, 
@@ -19,6 +19,15 @@ import { WorkflowGuide } from './WorkflowGuide';
 interface DashboardProps {
   setActiveTab: (tab: string) => void;
   onSelectAgent?: (agent: Agent) => void;
+}
+
+interface IncidentGroup {
+  key: string;
+  incidents: Incident[];
+  latest: Incident;
+  activeCount: number;
+  firstSeen: string;
+  lastSeen: string;
 }
 
 const EMPTY_STATS: DashboardStats = {
@@ -91,6 +100,38 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
     if (!needle) return true;
     return `${event.agent_name || event.agent_id} ${event.action_name} ${event.payload_summary}`.toLowerCase().includes(needle);
   });
+
+  const incidentGroups = useMemo<IncidentGroup[]>(() => {
+    const groups = new Map<string, IncidentGroup>();
+    incidents
+      .filter((incident) => incident.status !== 'resolved')
+      .forEach((incident) => {
+        const action = incident.action_name || incident.title;
+        const key = `${incident.agent_id}:${action}:${incident.decision || 'INCIDENT'}`;
+        const timestamp = incident.event_time || incident.created_at;
+        const existing = groups.get(key);
+        if (existing) {
+          existing.incidents.push(incident);
+          existing.activeCount += 1;
+          if (new Date(timestamp).getTime() < new Date(existing.firstSeen).getTime()) existing.firstSeen = timestamp;
+          if (new Date(timestamp).getTime() > new Date(existing.lastSeen).getTime()) {
+            existing.lastSeen = timestamp;
+            existing.latest = incident;
+          }
+        } else {
+          groups.set(key, {
+            key,
+            incidents: [incident],
+            latest: incident,
+            activeCount: 1,
+            firstSeen: timestamp,
+            lastSeen: timestamp
+          });
+        }
+      });
+
+    return Array.from(groups.values()).sort((left, right) => new Date(right.lastSeen).getTime() - new Date(left.lastSeen).getTime());
+  }, [incidents]);
 
   const getDecisionBadge = (decision: string) => {
     switch (decision) {
@@ -366,53 +407,57 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
             {/* Events Cards */}
             <div className="space-y-3.5 pt-1">
               {loading && events.length === 0 ? <div className="space-y-3">{[1, 2, 3].map((item) => <div key={item} className="h-28 rounded-xl bg-slate-100 dark:bg-slate-900 animate-pulse" />)}</div> : visibleEvents.slice(0, 5).map((evt) => (
-                <div
+                <details
                   key={evt.id}
-                  className="p-4 rounded-xl bg-slate-50/90 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-2.5 hover:border-slate-300 dark:hover:border-slate-700 transition-all text-xs shadow-sm"
+                  className="rounded-xl bg-slate-50/90 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-all text-xs shadow-sm"
                 >
-                  {/* Row 1: Agent Name & Timestamp */}
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-bold text-sm text-slate-900 dark:text-white truncate">
-                      {evt.agent_name || evt.agent_id}
-                    </span>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap shrink-0">
-                      {new Date(evt.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                    </span>
-                  </div>
-
-                  {/* Row 2: Action Tool Badge & Decision Tag */}
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 truncate max-w-[60%]">
-                      {evt.action_name}()
-                    </span>
-                    {getDecisionBadge(evt.decision)}
-                  </div>
-
-                  {/* Row 3: Action Description */}
-                  <div className="text-[11px] text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-950/60 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800/60 leading-relaxed break-words">
-                    {evt.payload_summary}
-                  </div>
-
-                  {/* Row 4: Policy Reasons / Violations */}
-                  {Array.isArray(evt.reasons) && evt.reasons.length > 0 && (
-                    <div className="space-y-1 text-[11px]">
-                      {evt.reasons.map((r, i) => (
-                        <div key={i} className="text-slate-600 dark:text-slate-400 flex items-start space-x-1.5">
-                          <span className="text-brand-600 dark:text-brand-400 font-bold leading-none mt-0.5">•</span>
-                          <span className="leading-snug">{r}</span>
-                        </div>
-                      ))}
+                  <summary className="cursor-pointer list-none p-4 space-y-2.5">
+                    {/* Row 1: Agent Name & Timestamp */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                        {evt.agent_name || evt.agent_id}
+                      </span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap shrink-0">
+                        {new Date(evt.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </span>
                     </div>
-                  )}
 
-                  {/* Row 5: Clean Mitigation Banner */}
-                  {evt.mitigation && (
-                    <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80 text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
-                      <span className="font-semibold text-slate-800 dark:text-slate-300">Enforcement: </span>
-                      <span>{evt.mitigation}</span>
+                    {/* Row 2: Action Tool Badge & Decision Tag */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 truncate max-w-[60%]">
+                        {evt.action_name}()
+                      </span>
+                      {getDecisionBadge(evt.decision)}
                     </div>
-                  )}
-                </div>
+                  </summary>
+
+                  <div className="border-t border-slate-200 dark:border-slate-800 p-4 pt-3 space-y-2.5">
+                    {/* Row 3: Action Description */}
+                    <div className="text-[11px] text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-950/60 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800/60 leading-relaxed break-words">
+                      {evt.payload_summary}
+                    </div>
+
+                    {/* Row 4: Policy Reasons / Violations */}
+                    {Array.isArray(evt.reasons) && evt.reasons.length > 0 && (
+                      <div className="space-y-1 text-[11px]">
+                        {evt.reasons.map((r, i) => (
+                          <div key={i} className="text-slate-600 dark:text-slate-400 flex items-start space-x-1.5">
+                            <span className="text-brand-600 dark:text-brand-400 font-bold leading-none mt-0.5">•</span>
+                            <span className="leading-snug">{r}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Row 5: Clean Mitigation Banner */}
+                    {evt.mitigation && (
+                      <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80 text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
+                        <span className="font-semibold text-slate-800 dark:text-slate-300">Enforcement: </span>
+                        <span>{evt.mitigation}</span>
+                      </div>
+                    )}
+                  </div>
+                </details>
               ))}
               {!loading && visibleEvents.length === 0 && <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center text-xs text-slate-500">No events match the current filters.</div>}
             </div>
@@ -435,11 +480,13 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
       </div>
 
       {/* Full Width: Organization-Wide AI Safety Patterns */}
-      <div className="glass-panel p-6 sm:p-8 rounded-2xl">
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Organization-Wide AI Safety Patterns</h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Recurring behavioral anomalies detected across multi-department agent deployments</p>
+      <details className="glass-panel rounded-2xl p-6 sm:p-8">
+        <summary className="cursor-pointer list-none">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Organization-wide patterns</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Recurring behavioral patterns detected across agents. Expand to inspect.</p>
+        </summary>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
           {stats.organizational_patterns.map((pat, idx) => (
             <div key={idx} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs space-y-2 shadow-sm">
               <div className="flex items-center justify-between">
@@ -453,10 +500,10 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
             </div>
           ))}
         </div>
-      </div>
+      </details>
 
       {/* Open Incidents Drawer / Section */}
-      {(incidents || []).filter(i => i.status !== 'resolved').length > 0 && (
+      {incidentGroups.length > 0 && (
         <div className="glass-panel p-6 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-950/10">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
@@ -465,52 +512,74 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">Incidents needing attention</h3>
-                <p className="text-xs text-slate-600 dark:text-slate-400">Review flagged or blocked actions here.</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">Repeated alerts are grouped by agent, action, and decision.</p>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {(incidents || []).filter(i => i.status !== 'resolved').map((inc) => (
-              <div key={inc.id} className="p-4 rounded-xl bg-white dark:bg-slate-900/90 border border-rose-200 dark:border-rose-900/40 space-y-3 text-xs shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <span className="px-2 py-0.5 rounded font-mono font-bold bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30">
-                      {inc.severity}
-                    </span>
-                    <span className="font-bold text-slate-900 dark:text-white">{inc.title}</span>
+          <div className="space-y-3">
+            {incidentGroups.map((group) => {
+              const latest = group.latest;
+              const actionable = group.incidents.find((incident) => incident.status === 'open') || latest;
+              const repeated = group.activeCount > 1;
+              const groupLabel = repeated ? `${group.activeCount} related alerts` : '1 active alert';
+              return (
+                <details key={group.key} className="rounded-xl border border-rose-200 bg-white shadow-sm dark:border-rose-900/40 dark:bg-slate-900/90">
+                  <summary className="cursor-pointer list-none p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="shrink-0 rounded px-2 py-0.5 font-mono font-bold text-rose-700 bg-rose-100 dark:bg-rose-500/20 dark:text-rose-300">{latest.severity}</span>
+                          <span className="break-words font-bold text-slate-900 dark:text-white">{latest.title}</span>
+                        </div>
+                        <p className="mt-2 text-xs text-slate-700 dark:text-slate-300">{latest.summary}</p>
+                      </div>
+                      <span className="shrink-0 text-[10px] text-slate-500 dark:text-slate-400">Last seen {new Date(group.lastSeen).toLocaleTimeString()}</span>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
+                      <span className="font-semibold text-rose-700 dark:text-rose-300">{groupLabel}</span>
+                      {repeated && <span>Same agent + action; each attempt is recorded separately.</span>}
+                      <span className="sm:ml-auto text-brand-700 dark:text-brand-300">Expand details</span>
+                    </div>
+                  </summary>
+
+                  <div className="space-y-3 border-t border-slate-200 p-4 dark:border-slate-800">
+                    <div className="rounded-lg border border-brand-100 bg-brand-50/60 px-3 py-2 text-[11px] text-brand-900 dark:border-brand-900/40 dark:bg-brand-950/20 dark:text-brand-200">
+                      <span className="font-bold">Why these are grouped:</span> the same agent attempted <span className="font-mono">{latest.action_name || 'this action'}</span> and received the same {latest.decision || 'safety'} decision. Each attempt remains available in the audit trail below.
+                    </div>
+
+                    <div className="space-y-2">
+                      {group.incidents.map((inc) => (
+                        <div key={inc.id} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] dark:border-slate-800 dark:bg-slate-950/50">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">{inc.status === 'acknowledged' ? 'Acknowledged' : 'Open'} · {inc.decision || 'Incident'}</span>
+                            <span className="text-slate-500">{new Date(inc.event_time || inc.created_at).toLocaleString()}</span>
+                          </div>
+                          <p className="mt-1 text-slate-600 dark:text-slate-400">{inc.summary}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="rounded-lg bg-slate-50 p-3 text-[11px] dark:bg-slate-950/80">
+                      <div className="mb-1 font-semibold text-brand-700 dark:text-brand-300">Recommended response:</div>
+                      {(Array.isArray(latest.runbook_steps) ? latest.runbook_steps : []).map((step, idx) => <div key={idx} className="text-slate-700 dark:text-slate-300">{step}</div>)}
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+                      {actionable.status === 'open' && <button onClick={() => handleIncidentAction(actionable.id, 'acknowledge')} disabled={resolvingId === actionable.id} className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">Acknowledge</button>}
+                      {actionable.decision === 'REVIEW' && <>
+                        <button onClick={() => handleIncidentAction(actionable.id, 'reject')} disabled={resolvingId === actionable.id} className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-500">Reject & Close</button>
+                        <button onClick={() => handleIncidentAction(actionable.id, 'approve')} disabled={resolvingId === actionable.id} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500">Approve & Close</button>
+                      </>}
+                      {actionable.decision !== 'REVIEW' && <button onClick={() => handleIncidentAction(actionable.id, 'resolve')} disabled={resolvingId === actionable.id} className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500"><Check className="h-3.5 w-3.5" />Resolve latest</button>}
+                    </div>
+                    <label htmlFor={`incident-note-${actionable.id}`} className="sr-only">Decision note for {latest.title}</label>
+                    <textarea id={`incident-note-${actionable.id}`} value={incidentNotes[actionable.id] || ''} onChange={(event) => setIncidentNotes((previous) => ({ ...previous, [actionable.id]: event.target.value }))} rows={2} placeholder="Optional decision note for the audit trail" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-900 dark:border-slate-800 dark:bg-slate-950/60 dark:text-white" />
+                    {actionable.decision === 'REVIEW' && <p className="text-right text-[10px] text-slate-500 dark:text-slate-400">Approval records the decision; it does not replay the held action.</p>}
                   </div>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400">{new Date(inc.created_at).toLocaleTimeString()}</span>
-                </div>
-
-                <p className="text-slate-700 dark:text-slate-300 text-xs">{inc.summary}</p>
-
-                <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 space-y-1 text-[11px]">
-                  <div className="text-brand-700 dark:text-brand-300 font-semibold mb-1">Recommended response:</div>
-                  {(Array.isArray(inc.runbook_steps) ? inc.runbook_steps : []).map((step, idx) => (
-                    <div key={idx} className="text-slate-700 dark:text-slate-300">{step}</div>
-                  ))}
-                </div>
-
-                <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
-                  {inc.status === 'open' && <button
-                    onClick={() => handleIncidentAction(inc.id, 'acknowledge')}
-                    disabled={resolvingId === inc.id}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 flex items-center space-x-1.5 transition-all shadow-sm"
-                  >
-                    <span>Acknowledge</span>
-                  </button>}
-                  {inc.decision === 'REVIEW' && <>
-                    <button onClick={() => handleIncidentAction(inc.id, 'reject')} disabled={resolvingId === inc.id} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white">Reject & Close</button>
-                    <button onClick={() => handleIncidentAction(inc.id, 'approve')} disabled={resolvingId === inc.id} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white">Approve & Close</button>
-                  </>}
-                  {inc.decision !== 'REVIEW' && <button onClick={() => handleIncidentAction(inc.id, 'resolve')} disabled={resolvingId === inc.id} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5"><Check className="w-3.5 h-3.5" />Resolve</button>}
-                </div>
-                <label htmlFor={`incident-note-${inc.id}`} className="sr-only">Decision note for {inc.title}</label>
-                <textarea id={`incident-note-${inc.id}`} value={incidentNotes[inc.id] || ''} onChange={(event) => setIncidentNotes((previous) => ({ ...previous, [inc.id]: event.target.value }))} rows={2} placeholder="Optional decision note for the audit trail" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-900 dark:border-slate-800 dark:bg-slate-950/60 dark:text-white" />
-                {inc.decision === 'REVIEW' && <p className="text-[10px] text-slate-500 dark:text-slate-400 text-right">Approval records the decision; it does not replay the held action.</p>}
-              </div>
-            ))}
+                </details>
+              );
+            })}
           </div>
         </div>
       )}

@@ -63,6 +63,7 @@ export interface Incident {
   action_name?: string;
   target_resource?: string;
   decision?: 'ALLOW' | 'REVIEW' | 'BLOCK';
+  event_time?: string;
   created_at: string;
 }
 
