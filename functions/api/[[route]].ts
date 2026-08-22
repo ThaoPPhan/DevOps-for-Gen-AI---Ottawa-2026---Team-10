@@ -177,7 +177,10 @@ app.post('/api/validate', async (c) => {
     console.error('Failed to log validation run:', err);
   }
 
-  return c.json(report);
+  return c.json({
+    ...report,
+    run_id: report.id
+  });
 });
 
 app.get('/api/validate/history', async (c) => {
