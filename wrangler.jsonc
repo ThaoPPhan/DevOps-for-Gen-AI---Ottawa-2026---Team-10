@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "agenticscale",
+  "compatibility_date": "2026-08-20",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "pages_build_output_dir": "./dist",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "agenticscale-db",
+      "database_id": "09f08ea8-ebf2-47ab-bf7c-b295f4d7a0c6"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "AGENTICSCALE_KV",
+      "id": "5e66f054cae345ed95d541d17eb7347d"
+    }
+  ]
+}
