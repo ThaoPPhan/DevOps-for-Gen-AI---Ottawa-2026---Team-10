@@ -10,7 +10,9 @@ import {
   ArrowRight, 
   ChevronRight, 
   Filter, 
-  Check 
+  Check,
+  ShieldCheck,
+  Clock
 } from 'lucide-react';
 import { Agent, SafetyEvent, Incident, DashboardStats } from '../types';
 import { api } from '../services/api';
@@ -97,19 +99,19 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
     switch (decision) {
       case 'ALLOW':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/30">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/30 shrink-0">
             <CheckCircle className="w-3 h-3 mr-1" /> ALLOW
           </span>
         );
       case 'REVIEW':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400 border border-amber-300 dark:border-amber-500/30">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400 border border-amber-300 dark:border-amber-500/30 shrink-0">
             <AlertTriangle className="w-3 h-3 mr-1" /> REVIEW REQUIRED
           </span>
         );
       case 'BLOCK':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-400 border border-rose-300 dark:border-rose-500/30">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-400 border border-rose-300 dark:border-rose-500/30 shrink-0">
             <XCircle className="w-3 h-3 mr-1" /> BLOCKED
           </span>
         );
@@ -396,7 +398,8 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
               </div>
             </div>
 
-            <div className="space-y-3 overflow-y-auto max-h-[580px] pr-1">
+            {/* Events List */}
+            <div className="space-y-3.5 overflow-y-auto max-h-[620px] pr-1">
               {(events.length > 0 ? events : [
                 {
                   id: 'evt-1001',
@@ -429,33 +432,50 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
               ]).map((evt) => (
                 <div
                   key={evt.id}
-                  className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 space-y-2 hover:border-slate-300 dark:hover:border-slate-700 transition-all text-xs"
+                  className="p-4 rounded-xl bg-slate-50/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-3 hover:border-slate-300 dark:hover:border-slate-700 transition-all text-xs shadow-sm"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-bold text-slate-900 dark:text-white">{evt.agent_name || evt.agent_id}</span>
-                      <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">{evt.action_name}()</span>
-                    </div>
+                  {/* Row 1: Agent Name & Timestamp */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                      {evt.agent_name || evt.agent_id}
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap shrink-0">
+                      {new Date(evt.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </span>
+                  </div>
+
+                  {/* Row 2: Action Tool Badge & Decision Tag */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 truncate max-w-[60%]">
+                      {evt.action_name}()
+                    </span>
                     {getDecisionBadge(evt.decision)}
                   </div>
 
-                  <p className="text-slate-700 dark:text-slate-300 text-[11px] line-clamp-2 bg-white dark:bg-slate-950/60 p-2 rounded border border-slate-200 dark:border-slate-800/50">
+                  {/* Row 3: Action Description */}
+                  <div className="text-[11px] text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-950/60 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800/60 leading-relaxed break-words">
                     {evt.payload_summary}
-                  </p>
-
-                  <div className="space-y-1 text-[11px]">
-                    {(Array.isArray(evt.reasons) ? evt.reasons : []).map((r, i) => (
-                      <div key={i} className="text-slate-600 dark:text-slate-400 flex items-start space-x-1.5">
-                        <span className="text-brand-600 dark:text-brand-400 font-bold">•</span>
-                        <span>{r}</span>
-                      </div>
-                    ))}
                   </div>
 
-                  <div className="pt-2 border-t border-slate-200 dark:border-slate-800/60 flex items-center justify-between text-[10px] text-slate-500">
-                    <span className="text-slate-500 dark:text-slate-400">{evt.mitigation}</span>
-                    <span>{new Date(evt.timestamp).toLocaleTimeString()}</span>
-                  </div>
+                  {/* Row 4: Policy Reasons / Violations */}
+                  {Array.isArray(evt.reasons) && evt.reasons.length > 0 && (
+                    <div className="space-y-1 text-[11px]">
+                      {evt.reasons.map((r, i) => (
+                        <div key={i} className="text-slate-600 dark:text-slate-400 flex items-start space-x-1.5">
+                          <span className="text-brand-600 dark:text-brand-400 font-bold leading-none mt-0.5">•</span>
+                          <span className="leading-snug">{r}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Row 5: Clean Mitigation Banner */}
+                  {evt.mitigation && (
+                    <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80 text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
+                      <span className="font-semibold text-slate-800 dark:text-slate-300">Enforcement: </span>
+                      <span>{evt.mitigation}</span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
