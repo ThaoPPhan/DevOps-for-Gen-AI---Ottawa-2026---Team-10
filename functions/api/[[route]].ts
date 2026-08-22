@@ -55,6 +55,12 @@ interface SessionPayload {
   expiresAt: number;
 }
 
+interface AccessIdentity {
+  subject?: string;
+  email?: string;
+  name?: string;
+}
+
 const SESSION_COOKIE = 'AgenticScaleSession';
 const SESSION_TTL_SECONDS = 60 * 60 * 24;
 
@@ -139,6 +145,18 @@ function sessionCookie(value: string, maxAge: number): string {
   return `${SESSION_COOKIE}=${value}; Max-Age=${maxAge}; Path=/; Secure; HttpOnly; SameSite=Lax`;
 }
 
+function readAccessJwtIdentity(request: Request): AccessIdentity | null {
+  const token = request.headers.get('Cf-Access-Jwt-Assertion') || '';
+  const payloadPart = token.split('.')[1];
+  if (!payloadPart) return null;
+  try {
+    const payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(payloadPart))) as AccessIdentity;
+    return payload && typeof payload === 'object' ? payload : null;
+  } catch {
+    return null;
+  }
+}
+
 function presentedApiKey(request: Request): string {
   const explicitKey = request.headers.get('X-AgenticScale-Key');
   if (explicitKey) return explicitKey;
@@ -190,10 +208,17 @@ async function resolveAuth(c: any): Promise<AuthContext | null> {
   if (env.GATEWAY_API_KEY && suppliedKey && timingSafeEqual(env.GATEWAY_API_KEY, suppliedKey)) return demoAuthContext('api-key');
 
   const host = new URL(request.url).hostname;
+  const path = new URL(request.url).pathname;
+  // The login callback is protected by Cloudflare Access. Some clients do not
+  // receive the convenience email headers there, but Access still provides its
+  // signed JWT assertion. Use its claims only on this protected callback; the
+  // public demo endpoints continue to rely on the signed AgenticScale session.
+  const accessJwtIdentity = path === '/api/auth/login' ? readAccessJwtIdentity(request) : null;
   const accessEmail = request.headers.get('Cf-Access-Authenticated-User-Email') || '';
-  const accessSubject = request.headers.get('Cf-Access-User-ID') || request.headers.get('Cf-Access-Authenticated-User-ID') || accessEmail;
-  const accessName = request.headers.get('Cf-Access-Authenticated-User-Name') || accessEmail;
-  if (!accessEmail) {
+  const accessSubject = request.headers.get('Cf-Access-User-ID') || request.headers.get('Cf-Access-Authenticated-User-ID') || accessJwtIdentity?.subject || accessEmail || accessJwtIdentity?.email || '';
+  const accessName = request.headers.get('Cf-Access-Authenticated-User-Name') || accessJwtIdentity?.name || accessEmail || accessJwtIdentity?.email || '';
+  const resolvedAccessEmail = accessEmail || accessJwtIdentity?.email || '';
+  if (!resolvedAccessEmail) {
     const session = await readSessionToken(request, env.AUTH_SESSION_SECRET);
     if (session) {
       const sessionUser = await env.DB.prepare(`
@@ -230,7 +255,7 @@ async function resolveAuth(c: any): Promise<AuthContext | null> {
     WHERE u.subject = ? OR lower(u.email) = lower(?)
     ORDER BY CASE m.role WHEN 'owner' THEN 4 WHEN 'admin' THEN 3 WHEN 'operator' THEN 2 ELSE 1 END DESC
     LIMIT 1
-  `).bind(accessSubject, accessEmail).first();
+  `).bind(accessSubject, resolvedAccessEmail).first();
   if (!user) return null;
 
   await env.DB.prepare('UPDATE users SET last_seen_at = CURRENT_TIMESTAMP, subject = ?, name = ? WHERE id = ?')
