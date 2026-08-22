@@ -20,56 +20,40 @@ interface DashboardProps {
   onSelectAgent?: (agent: Agent) => void;
 }
 
-const DEFAULT_STATS: DashboardStats = {
-  fleet: { total_agents: 4, protected: 2, monitoring: 1, at_risk: 1 },
-  telemetry: { total_events: 5, allowed: 2, reviewed: 1, blocked: 2, interventions_rate: 60 },
-  incidents: { open_count: 1 },
-  organizational_patterns: [
-    {
-      category: 'Financial Operations',
-      pattern: 'High-value disbursements exceeding threshold & unverified vendor bank updates',
-      frequency: 'High',
-      action_status: 'Guarded by dual-approval threshold & verification policy'
-    },
-    {
-      category: 'Infrastructure & DevOps',
-      pattern: 'Attempts to disable audit logging and modify IAM during auto-healing cycles',
-      frequency: 'Medium',
-      action_status: 'Permanently blocked by perimeter policy'
-    },
-    {
-      category: 'Customer Experience Copilots',
-      pattern: 'Unsanitized PII and credit card tokens in outbound communications',
-      frequency: 'Medium',
-      action_status: 'Sanitized and filtered via DLP boundary'
-    }
-  ]
+const EMPTY_STATS: DashboardStats = {
+  fleet: { total_agents: 0, protected: 0, monitoring: 0, at_risk: 0 },
+  telemetry: { total_events: 0, allowed: 0, reviewed: 0, blocked: 0, interventions_rate: 0 },
+  incidents: { open_count: 0 },
+  organizational_patterns: []
 };
 
 export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
-  const [stats, setStats] = useState<DashboardStats>(DEFAULT_STATS);
+  const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [events, setEvents] = useState<SafetyEvent[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [filterDecision, setFilterDecision] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const [statsData, agentsData, eventsData, incidentsData] = await Promise.all([
-        api.getDashboardStats().catch(() => DEFAULT_STATS),
-        api.getAgents().catch(() => []),
-        api.getEvents({ decision: filterDecision || undefined, limit: 10 }).catch(() => []),
-        api.getIncidents().catch(() => [])
+        api.getDashboardStats(),
+        api.getAgents(),
+        api.getEvents({ decision: filterDecision || undefined, limit: 10 }),
+        api.getIncidents()
       ]);
-      if (statsData && statsData.fleet) setStats(statsData);
-      if (Array.isArray(agentsData) && agentsData.length > 0) setAgents(agentsData);
-      if (Array.isArray(eventsData)) setEvents(eventsData);
-      if (Array.isArray(incidentsData)) setIncidents(incidentsData);
+      setStats(statsData);
+      setAgents(agentsData);
+      setEvents(eventsData);
+      setIncidents(incidentsData);
     } catch (err) {
       console.error('Error loading dashboard data:', err);
+      setError(err instanceof Error ? err.message : 'Dashboard data is unavailable.');
     } finally {
       setLoading(false);
     }
@@ -199,6 +183,12 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
         </div>
       </div>
 
+      {error && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-300">
+          Dashboard data could not be loaded: {error}. Use Refresh to retry.
+        </div>
+      )}
+
       {/* KPI Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
         
@@ -209,16 +199,16 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
           </div>
           <div className="mt-3 flex items-baseline space-x-2">
             <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
-              {stats?.fleet?.total_agents ?? (agents.length || 4)}
+              {stats.fleet.total_agents}
             </span>
             <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">Active</span>
           </div>
           <div className="mt-2 flex items-center space-x-2 text-[11px] text-slate-500 dark:text-slate-400">
-            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{stats?.fleet?.protected ?? 2} Protected</span>
+            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{stats.fleet.protected} Protected</span>
             <span>•</span>
-            <span className="text-blue-600 dark:text-blue-400 font-semibold">{stats?.fleet?.monitoring ?? 1} Monitoring</span>
+            <span className="text-blue-600 dark:text-blue-400 font-semibold">{stats.fleet.monitoring} Monitoring</span>
             <span>•</span>
-            <span className="text-amber-600 dark:text-amber-400 font-semibold">{stats?.fleet?.at_risk ?? 1} At Risk</span>
+            <span className="text-amber-600 dark:text-amber-400 font-semibold">{stats.fleet.at_risk} At Risk</span>
           </div>
         </div>
 
@@ -229,14 +219,14 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
           </div>
           <div className="mt-3 flex items-baseline space-x-2">
             <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
-              {stats?.telemetry?.interventions_rate ?? 60}%
+              {stats.telemetry.interventions_rate}%
             </span>
             <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Actions Filtered</span>
           </div>
           <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
-            <span className="text-amber-600 dark:text-amber-400 font-semibold">{stats?.telemetry?.reviewed ?? 1} Held for Review</span>
+            <span className="text-amber-600 dark:text-amber-400 font-semibold">{stats.telemetry.reviewed} Held for Review</span>
             <span className="mx-1">•</span>
-            <span className="text-rose-600 dark:text-rose-400 font-semibold">{stats?.telemetry?.blocked ?? 2} Blocked</span>
+            <span className="text-rose-600 dark:text-rose-400 font-semibold">{stats.telemetry.blocked} Blocked</span>
           </div>
         </div>
 
@@ -247,7 +237,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
           </div>
           <div className="mt-3 flex items-baseline space-x-2">
             <span className="text-3xl font-extrabold text-rose-600 dark:text-rose-400">
-              {(incidents || []).filter(i => i.status === 'open').length || 1}
+              {incidents.filter(i => i.status === 'open').length}
             </span>
             <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Require Action</span>
           </div>
@@ -279,36 +269,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
             </div>
 
             <div className="space-y-3 pt-1">
-              {(agents.length > 0 ? agents : [
-                {
-                  id: 'agent-invoice-01',
-                  name: 'Invoice & Payment Agent',
-                  owner: 'Finance & AP Team',
-                  purpose: 'Process supplier invoices, extract payment details, and approve low-risk disbursements',
-                  version: 'v1.4.2',
-                  status: 'protected' as const,
-                  risk_score: 42,
-                  blast_radius: 'high' as const,
-                  allowed_actions: ['read_invoice', 'extract_metadata'],
-                  restricted_actions: ['disable_audit_logging'],
-                  required_controls: ['human_approval_over_5k'],
-                  max_transaction_limit: 5000
-                },
-                {
-                  id: 'agent-fraud-02',
-                  name: 'Fraud Analysis Agent',
-                  owner: 'Risk & Trust Team',
-                  purpose: 'Continuously inspect transaction patterns, score anomalies, and quarantine suspicious wallets',
-                  version: 'v2.0.0-rc1',
-                  status: 'monitoring' as const,
-                  risk_score: 68,
-                  blast_radius: 'critical' as const,
-                  allowed_actions: ['inspect_transaction'],
-                  restricted_actions: ['delete_audit_records'],
-                  required_controls: ['dual_custody_for_unfreeze'],
-                  max_transaction_limit: 0
-                }
-              ]).map((agent) => (
+              {agents.map((agent) => (
                 <div 
                   key={agent.id}
                   className="glass-card p-4 rounded-xl hover:border-brand-300 dark:hover:border-slate-700 transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
@@ -382,36 +343,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
 
             {/* Events Cards */}
             <div className="space-y-3.5 pt-1">
-              {(events.length > 0 ? events.slice(0, 3) : [
-                {
-                  id: 'evt-1001',
-                  agent_id: 'agent-invoice-01',
-                  agent_name: 'Invoice & Payment Agent',
-                  action_name: 'read_invoice',
-                  target_resource: 's3://invoices/inv-2026-8812.pdf',
-                  payload_summary: 'Extracted total: $1,240.00 from Acme Logistics Inc. Validated tax ID.',
-                  decision: 'ALLOW' as const,
-                  risk_score: 10,
-                  reasons: ['Action matches approved capability whitelist', 'Amount within pre-authorized autonomy limit ($5,000)'],
-                  mitigation: 'Automatic audit record committed',
-                  latency_ms: 11,
-                  timestamp: new Date().toISOString()
-                },
-                {
-                  id: 'evt-1002',
-                  agent_id: 'agent-invoice-01',
-                  agent_name: 'Invoice & Payment Agent',
-                  action_name: 'update_vendor_account',
-                  target_resource: 'vendor_db:id_9941',
-                  payload_summary: 'URGENT: Changed routing to 021000021 acct #992144129. Attempted $45,000 disbursement.',
-                  decision: 'REVIEW' as const,
-                  risk_score: 89,
-                  reasons: ['High Financial Impact ($45,000 exceeds $5,000 limit)', 'Vendor Banking Info Mutation without MFA dual-custody'],
-                  mitigation: 'Execution paused. Notification dispatched to Finance Approver. Out-of-band verification required.',
-                  latency_ms: 16,
-                  timestamp: new Date().toISOString()
-                }
-              ]).map((evt) => (
+              {events.slice(0, 3).map((evt) => (
                 <div
                   key={evt.id}
                   className="p-4 rounded-xl bg-slate-50/90 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-2.5 hover:border-slate-300 dark:hover:border-slate-700 transition-all text-xs shadow-sm"
@@ -484,7 +416,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Recurring behavioral anomalies detected across multi-department agent deployments</p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {(stats?.organizational_patterns || DEFAULT_STATS.organizational_patterns).map((pat, idx) => (
+          {stats.organizational_patterns.map((pat, idx) => (
             <div key={idx} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs space-y-2 shadow-sm">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-brand-700 dark:text-brand-300 text-sm">{pat.category}</span>

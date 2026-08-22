@@ -17,6 +17,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState<boolean>(false);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
 
@@ -35,6 +36,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
 
   const loadAgents = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await api.getAgents();
       setAgents(data);
@@ -43,6 +45,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
       }
     } catch (err) {
       console.error('Error fetching agents:', err);
+      setError(err instanceof Error ? err.message : 'Agent profiles are unavailable.');
     } finally {
       setLoading(false);
     }
@@ -69,7 +72,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
 
   const handleCreateNew = () => {
     const newAgent: Agent = {
-      id: `agent-${Date.now().toString(36)}`,
+      id: `agent-${crypto.randomUUID()}`,
       name: 'New Custom AI Agent',
       owner: 'Engineering & Operations',
       purpose: 'Autonomous operational workflow',
@@ -112,6 +115,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
       setTimeout(() => setSavedSuccess(false), 3000);
     } catch (err) {
       console.error('Error saving agent profile:', err);
+      setError(err instanceof Error ? err.message : 'Unable to save the profile.');
     } finally {
       setSaving(false);
     }
@@ -148,6 +152,12 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
         </div>
       </div>
 
+      {error && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-300">
+          {error}
+        </div>
+      )}
+
       {/* Main Two-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
@@ -156,6 +166,11 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
           <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Registered Agent Profiles</h2>
           
           <div className="space-y-2">
+            {!loading && agents.length === 0 && !error && (
+              <p className="rounded-xl border border-dashed border-slate-300 p-4 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                No agent profiles are registered yet.
+              </p>
+            )}
             {agents.map((agent) => (
               <div
                 key={agent.id}

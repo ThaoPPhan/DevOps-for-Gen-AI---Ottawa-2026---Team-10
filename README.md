@@ -89,7 +89,7 @@ graph TD
 ## 🚀 Quick Start & Local Development
 
 ### Prerequisites
-- Node.js `v20+`
+- Node.js `v22+`
 - Cloudflare Wrangler CLI (`npm install -g wrangler`)
 
 ### Installation
@@ -103,6 +103,15 @@ npm install
 
 # Run local development server
 npm run dev
+
+# Validate types and build output
+npm test
+
+# Run the local Pages Functions API (in a second terminal)
+npx wrangler pages dev dist --local --port 8788
+
+# Run isolated local API regression tests
+BASE_URL=http://127.0.0.1:8788 npm run test:e2e
 ```
 
 ### Database Migrations (Cloudflare D1)
@@ -126,20 +135,29 @@ npm run deploy
 
 ## 🔌 API & Agent Integration
 
-Wrap any AI agent action with the AgenticScale Gateway API:
+Wrap any AI agent action with the AgenticScale Gateway API. External callers must send the `X-AgenticScale-Key` header using the production `GATEWAY_API_KEY` secret. Same-origin dashboard requests use the allowed Pages origin.
+
+Configure production secrets with Wrangler (never commit them):
+
+```bash
+npx wrangler secret put ADMIN_API_KEY
+npx wrangler secret put GATEWAY_API_KEY
+```
 
 ### Python Example
 ```python
 import requests
+import os
 
 def execute_safe_action(agent_id, action_name, target_resource, payload):
-    url = "https://agenticscale.org/api/gateway/evaluate"
+    url = "https://agenticscale.pages.dev/api/gateway/evaluate"
+    headers = {"X-AgenticScale-Key": os.environ["AGENTICSCALE_API_KEY"]}
     res = requests.post(url, json={
         "agent_id": agent_id,
         "action_name": action_name,
         "target_resource": target_resource,
         "payload": payload
-    }).json()
+    }, headers=headers).json()
 
     if res.get("decision") == "ALLOW":
         return True  # Proceed with execution
@@ -153,7 +171,8 @@ def execute_safe_action(agent_id, action_name, target_resource, payload):
 
 ### cURL
 ```bash
-curl -X POST https://agenticscale.org/api/gateway/evaluate \
+curl -X POST https://agenticscale.pages.dev/api/gateway/evaluate \
+  -H "X-AgenticScale-Key: $AGENTICSCALE_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "agent_id": "agent-invoice-01",

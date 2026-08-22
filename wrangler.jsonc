@@ -5,6 +5,9 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
+  "vars": {
+    "APP_VERSION": "2.0.0"
+  },
   "pages_build_output_dir": "./dist",
   "d1_databases": [
     {

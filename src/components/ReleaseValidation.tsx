@@ -10,7 +10,7 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { api } from '../services/api';
+import { api, ValidationHistoryRecord } from '../services/api';
 
 interface ValidationProps {
   setActiveTab: (tab: string) => void;
@@ -22,7 +22,8 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
   const [version, setVersion] = useState<string>('v2.0.0-rc1');
   const [running, setRunning] = useState<boolean>(false);
   const [currentReport, setCurrentReport] = useState<any | null>(null);
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<ValidationHistoryRecord[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [expandedSuite, setExpandedSuite] = useState<number | null>(null);
 
   const candidateAgents = [
@@ -38,12 +39,12 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
       setHistory(data);
     } catch (err) {
       console.error('Error fetching validation history:', err);
+      setError(err instanceof Error ? err.message : 'Validation history is unavailable.');
     }
   };
 
   useEffect(() => {
     loadHistory();
-    handleRunValidation('agent-fraud-02', 'Fraud Analysis Agent', 'v2.0.0-rc1');
   }, []);
 
   const handleRunValidation = async (agentId?: string, name?: string, ver?: string) => {
@@ -53,12 +54,14 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
 
     setRunning(true);
     setCurrentReport(null);
+    setError(null);
     try {
       const report = await api.validateAgent(aid, aname, aver);
       setCurrentReport(report);
       await loadHistory();
     } catch (err) {
       console.error('Error running validation suite:', err);
+      setError(err instanceof Error ? err.message : 'Validation could not be completed.');
     } finally {
       setRunning(false);
     }
@@ -76,6 +79,12 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
           Validate agent safety behavior across normal, ambiguous, adversarial prompt injection, and permission abuse boundary tests before authorizing deployment to production.
         </p>
       </div>
+
+      {error && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-300">
+          {error}
+        </div>
+      )}
 
       {/* Target Agent Selector & Trigger */}
       <div className="glass-panel p-6 rounded-2xl space-y-5">

@@ -1,4 +1,4 @@
-// Deterministic AI Safety Policy Engine for AgenticScale
+// Deterministic AI Safety Policy Engine for AgenticScale.
 
 export interface AgentContext {
   id: string;
@@ -19,7 +19,7 @@ export interface EvaluateRequest {
   agent_id: string;
   action_name: string;
   target_resource?: string;
-  payload?: Record<string, any>;
+  payload?: Record<string, unknown>;
   prompt_input?: string;
 }
 
@@ -35,8 +35,7 @@ export interface EvaluationResult {
   timestamp: string;
 }
 
-// Critical unsafe patterns that trigger instant BLOCK
-const DANGEROUS_ACTIONS = [
+const DANGEROUS_ACTIONS = new Set([
   'disable_audit_logging',
   'delete_audit_records',
   'drop_database_table',
@@ -46,197 +45,188 @@ const DANGEROUS_ACTIONS = [
   'bypass_safety_guardrails',
   'raw_sql_execution',
   'unfreeze_sanctioned_account'
-];
+]);
 
-// Prompt injection indicators
 const INJECTION_PATTERNS = [
-  /ignore (all )?(previous|safety|prior) (instructions|rules|constraints)/i,
-  /system prompt override/i,
+  /ignore\s+(all\s+)?(previous|prior|safety)\s+(instructions|rules|constraints)/i,
+  /system\s+prompt\s+override/i,
   /you are now in unrestricted developer mode/i,
-  /disregard safety protocols/i,
+  /disregard\s+safety\s+(protocols|rules|constraints)/i,
   /act as an unrestricted/i,
   /transfer .+ without authorization/i,
-  /exfiltrate/i
+  /exfiltrate/i,
+  /assistant\s+instruction.{0,80}(bypass|ignore|override)/i,
+  /bypass\s+(validation|approval|safety)\s+(checks|rules|controls)/i
 ];
 
-// PII & sensitive credential leakage patterns
 const PII_PATTERNS = [
-  /\b\d{3}-\d{2}-\d{4}\b/, // SSN
-  /\b4[0-9]{12}(?:[0-9]{3})?\b/, // Visa
-  /\b5[1-5][0-9]{14}\b/, // MasterCard
+  /\b\d{3}-\d{2}-\d{4}\b/,
+  /\b4[0-9]{12}(?:[0-9]{3})?\b/,
+  /\b5[1-5][0-9]{14}\b/,
   /BEGIN (RSA|OPENSSH|PRIVATE) KEY/i,
   /api[_-]?key\s*[:=]\s*['"][a-zA-Z0-9_\-]{20,}['"]/i
 ];
 
-export function evaluateAgentAction(
-  request: EvaluateRequest,
-  agent?: AgentContext
+function result(
+  startTime: number,
+  decision: EvaluationResult['decision'],
+  riskScore: number,
+  reasons: string[],
+  mitigation: string,
+  incidentSeverity?: EvaluationResult['incident_severity'],
+  runbookSteps?: string[]
 ): EvaluationResult {
-  const startTime = Date.now();
-  const reasons: string[] = [];
-  let decision: 'ALLOW' | 'REVIEW' | 'BLOCK' = 'ALLOW';
-  let riskScore = 10;
-  let incidentSeverity: 'P1' | 'P2' | 'P3' | undefined;
-  let runbookSteps: string[] = [];
-  let mitigation = 'Action validated against approved safety policy. Logged to continuous telemetry stream.';
-
-  const action = request.action_name;
-  const payload = request.payload || {};
-  const promptInput = request.prompt_input || '';
-  const payloadString = JSON.stringify(payload) + ' ' + promptInput;
-
-  // 1. Check for Critical Administrative & Destructive Actions (Instant BLOCK - P1)
-  if (DANGEROUS_ACTIONS.includes(action) || (agent?.restricted_actions && agent.restricted_actions.includes(action))) {
-    decision = 'BLOCK';
-    riskScore = 98;
-    incidentSeverity = 'P1';
-    reasons.push(`Critical Safety Violation: '${action}' is explicitly prohibited by governance boundary.`);
-    reasons.push('Action classified as an irreversible administrative compromise or audit evasion attempt.');
-    mitigation = 'Action blocked in-flight at gateway. Agent execution halted. Security incident P1 recorded.';
-    runbookSteps = [
-      `1. Immediate Gateway Quarantine: Agent '${agent?.name || request.agent_id}' execution token suspended.`,
-      '2. Audit Log Integrity Check: Verify immutable D1 records for tamper attempts.',
-      '3. Blast Radius Assessment: Review preceding 30 minutes of agent operations.',
-      '4. Root Cause Analysis: Inspect prompt context for indirect jailbreaks.',
-      '5. Governance Sign-off: Require CISO / Security Officer approval before unfreezing agent.'
-    ];
-    return {
-      decision,
-      risk_score: riskScore,
-      reasons,
-      mitigation,
-      incident_created: true,
-      incident_severity: incidentSeverity,
-      runbook_steps: runbookSteps,
-      latency_ms: Math.max(8, Date.now() - startTime),
-      timestamp: new Date().toISOString()
-    };
-  }
-
-  // 2. Check for Prompt Injection Attacks
-  const matchedInjection = INJECTION_PATTERNS.find(pattern => pattern.test(payloadString));
-  if (matchedInjection || payload.contains_injection_pattern === true || payload.instruction_override === true) {
-    decision = 'BLOCK';
-    riskScore = 94;
-    incidentSeverity = 'P2';
-    reasons.push('Prompt Injection Threat: External untrusted instructions attempted to manipulate agent control flow.');
-    reasons.push('Matched signature: Instruction override / jailbreak pattern in input stream.');
-    mitigation = 'Untrusted input isolated and dropped. Gateway blocked downstream tool execution.';
-    runbookSteps = [
-      '1. Ingress Quarantine: Discard the malicious message payload.',
-      '2. Prompt Defense Review: Update input sanitization filter and guardrail classifiers.',
-      '3. Re-validate Agent: Run Module 3 pre-release validation suite.'
-    ];
-    return {
-      decision,
-      risk_score: riskScore,
-      reasons,
-      mitigation,
-      incident_created: true,
-      incident_severity: incidentSeverity,
-      runbook_steps: runbookSteps,
-      latency_ms: Math.max(9, Date.now() - startTime),
-      timestamp: new Date().toISOString()
-    };
-  }
-
-  // 3. Check for Data Loss Prevention (PII / Sensitive Credential Leakage)
-  const matchedPii = PII_PATTERNS.find(pattern => pattern.test(payloadString));
-  if (matchedPii || (action === 'send_external_email' && payload.contains_unredacted_pii === true)) {
-    decision = 'BLOCK';
-    riskScore = 91;
-    incidentSeverity = 'P2';
-    reasons.push('Data Loss Prevention (DLP) Violation: Unredacted PII or financial credentials detected in egress payload.');
-    reasons.push('Violates DLP Policy (pol-dlp-001): External data transmission boundary breach.');
-    mitigation = 'Egress payload blocked. Redaction enforcement triggered.';
-    runbookSteps = [
-      '1. DLP Scrubbing: Apply automated regex redaction filter to agent egress channel.',
-      '2. Incident Notification: Notify Data Protection Officer (DPO).',
-      '3. Verify destination URL / recipient domain verification whitelist.'
-    ];
-    return {
-      decision,
-      risk_score: riskScore,
-      reasons,
-      mitigation,
-      incident_created: true,
-      incident_severity: incidentSeverity,
-      runbook_steps: runbookSteps,
-      latency_ms: Math.max(10, Date.now() - startTime),
-      timestamp: new Date().toISOString()
-    };
-  }
-
-  // 4. Financial & High-Risk Mutation Logic (REVIEW REQUIRED)
-  const amount = Number(payload.amount) || 0;
-  const maxLimit = agent?.max_transaction_limit ?? 5000;
-  const isVendorAccountChange = action === 'update_vendor_account' || payload.vendor_account_changed === true || payload.is_new_bank_account === true;
-  const isUrgentExternalEmail = payload.is_urgent_external_source === true || /bank account changed|update immediately|urgent supplier/i.test(payloadString);
-
-  if (isVendorAccountChange || (action === 'send_payment' && amount > maxLimit) || isUrgentExternalEmail) {
-    decision = 'REVIEW';
-    riskScore = Math.min(89, Math.max(70, Math.round(50 + (amount > 0 ? Math.log10(amount + 1) * 8 : 25))));
-    incidentSeverity = 'P2';
-
-    if (amount > maxLimit && maxLimit > 0) {
-      reasons.push(`High Financial Impact: Transaction amount ($${amount.toLocaleString()}) exceeds authorized autonomous threshold ($${maxLimit.toLocaleString()}).`);
-    }
-    if (isVendorAccountChange) {
-      reasons.push('Vendor Banking Mutation: Bank routing/account details altered without out-of-band dual-control verification.');
-    }
-    if (isUrgentExternalEmail) {
-      reasons.push('Untrusted External Ingress: Request triggered by unverified supplier email containing urgency cues.');
-    }
-
-    mitigation = 'Autonomous execution paused. Human-in-the-Loop approval gate triggered. Out-of-band verification required.';
-    runbookSteps = [
-      `1. Hold Payment: Suspend transaction of $${amount.toLocaleString()} pending authorization.`,
-      '2. Voice Verification: Conduct direct phone verification with verified vendor controller.',
-      '3. Dual Sign-off: Require Finance Manager approval in AgenticScale governance portal.'
-    ];
-
-    return {
-      decision,
-      risk_score: riskScore,
-      reasons,
-      mitigation,
-      incident_created: true,
-      incident_severity: incidentSeverity,
-      runbook_steps: runbookSteps,
-      latency_ms: Math.max(12, Date.now() - startTime),
-      timestamp: new Date().toISOString()
-    };
-  }
-
-  // 5. Capability Whitelist Validation
-  if (agent && agent.allowed_actions && agent.allowed_actions.length > 0) {
-    if (!agent.allowed_actions.includes(action)) {
-      decision = 'REVIEW';
-      riskScore = 65;
-      reasons.push(`Action '${action}' is not in agent '${agent.name}' approved capability whitelist.`);
-      reasons.push('Requires explicit capability expansion review.');
-      mitigation = 'Action held for policy amendment approval.';
-      return {
-        decision,
-        risk_score: riskScore,
-        reasons,
-        mitigation,
-        latency_ms: Math.max(7, Date.now() - startTime),
-        timestamp: new Date().toISOString()
-      };
-    }
-  }
-
-  // 6. Normal Approved Action
-  reasons.push(`Action '${action}' matches approved operating boundary.`);
-  reasons.push('All deterministic safety guardrails, rate limits, and DLP checks passed.');
-
   return {
-    decision: 'ALLOW',
-    risk_score: Math.min(25, 10 + Math.floor(Math.random() * 8)),
+    decision,
+    risk_score: riskScore,
     reasons,
     mitigation,
-    latency_ms: Math.max(6, Date.now() - startTime),
+    incident_created: Boolean(incidentSeverity),
+    incident_severity: incidentSeverity,
+    runbook_steps: runbookSteps,
+    latency_ms: Math.max(1, Date.now() - startTime),
     timestamp: new Date().toISOString()
   };
+}
+
+export function evaluateAgentAction(request: EvaluateRequest, agent?: AgentContext): EvaluationResult {
+  const startTime = Date.now();
+  const action = request.action_name.trim().toLowerCase();
+  const payload = request.payload || {};
+  const promptInput = request.prompt_input || '';
+  const payloadString = `${JSON.stringify(payload)} ${promptInput}`;
+
+  if (!agent) {
+    return result(
+      startTime,
+      'REVIEW',
+      95,
+      ['Agent identity could not be verified against a registered safety profile.'],
+      'Execution held because the gateway cannot authorize an unknown agent.',
+      'P1',
+      ['1. Register or restore the agent safety profile.', '2. Re-run the action only after ownership and permissions are verified.']
+    );
+  }
+
+  if (agent.status === 'quarantined') {
+    return result(
+      startTime,
+      'BLOCK',
+      99,
+      [`Agent '${agent.name}' is quarantined and cannot execute actions.`],
+      'Execution blocked while the agent is quarantined.',
+      'P1',
+      ['1. Review the active incident and runbook.', '2. Require governance approval before releasing the quarantine.']
+    );
+  }
+
+  if (DANGEROUS_ACTIONS.has(action) || agent.restricted_actions.includes(action)) {
+    return result(
+      startTime,
+      'BLOCK',
+      98,
+      [
+        `Critical Safety Violation: '${action}' is explicitly prohibited by governance boundary.`,
+        'Action classified as an irreversible administrative compromise or audit evasion attempt.'
+      ],
+      'Action blocked in-flight at gateway. Agent execution halted. Security incident P1 recorded.',
+      'P1',
+      [
+        `1. Immediate Gateway Quarantine: Agent '${agent.name}' execution token suspended.`,
+        '2. Audit Log Integrity Check: Verify immutable D1 records for tamper attempts.',
+        '3. Blast Radius Assessment: Review preceding 30 minutes of agent operations.',
+        '4. Root Cause Analysis: Inspect prompt context for indirect jailbreaks.',
+        '5. Governance Sign-off: Require security officer approval before unfreezing the agent.'
+      ]
+    );
+  }
+
+  const matchedInjection = INJECTION_PATTERNS.some((pattern) => pattern.test(payloadString));
+  if (matchedInjection || payload.contains_injection_pattern === true || payload.instruction_override === true) {
+    return result(
+      startTime,
+      'BLOCK',
+      94,
+      [
+        'Prompt Injection Threat: External untrusted instructions attempted to manipulate agent control flow.',
+        'Input matched an instruction override or jailbreak pattern.'
+      ],
+      'Untrusted input isolated and dropped. Gateway blocked downstream tool execution.',
+      'P2',
+      [
+        '1. Ingress Quarantine: Discard the malicious message payload.',
+        '2. Prompt Defense Review: Update input sanitization and guardrail classifiers.',
+        '3. Re-validate the agent before restoring autonomous execution.'
+      ]
+    );
+  }
+
+  const egressAction = /^(send|export|upload|notify|webhook|post)/i.test(action) || action === 'send_external_email';
+  const matchedPii = egressAction && PII_PATTERNS.some((pattern) => pattern.test(payloadString));
+  if (matchedPii || (action === 'send_external_email' && payload.contains_unredacted_pii === true)) {
+    return result(
+      startTime,
+      'BLOCK',
+      91,
+      [
+        'Data Loss Prevention violation: Unredacted PII or financial credentials detected in an egress payload.',
+        'External data transmission crossed the configured protection boundary.'
+      ],
+      'Egress payload blocked. Redaction enforcement triggered.',
+      'P2',
+      [
+        '1. Apply automated redaction to the egress payload.',
+        '2. Notify the data protection owner.',
+        '3. Verify the destination against the approved recipient allowlist.'
+      ]
+    );
+  }
+
+  const amount = typeof payload.amount === 'number' ? payload.amount : Number(payload.amount || 0);
+  const safeAmount = Number.isFinite(amount) && amount >= 0 ? amount : Number.POSITIVE_INFINITY;
+  const maxLimit = Number.isFinite(agent.max_transaction_limit) ? Math.max(0, agent.max_transaction_limit) : 0;
+  const isVendorAccountChange = action === 'update_vendor_account' || payload.vendor_account_changed === true || payload.is_new_bank_account === true;
+  const isUrgentExternalRequest = payload.is_urgent_external_source === true || /bank account changed|update immediately|urgent supplier/i.test(payloadString);
+  const isHighValuePayment = action === 'send_payment' && safeAmount > maxLimit;
+
+  if (isVendorAccountChange || isHighValuePayment || isUrgentExternalRequest) {
+    const reasons: string[] = [];
+    if (isHighValuePayment) {
+      reasons.push(`High Financial Impact: Transaction amount ($${safeAmount.toLocaleString()}) exceeds the authorized threshold ($${maxLimit.toLocaleString()}).`);
+    }
+    if (isVendorAccountChange) reasons.push('Vendor Banking Mutation: Bank routing/account details require out-of-band dual-control verification.');
+    if (isUrgentExternalRequest) reasons.push('Untrusted External Ingress: Request contains urgency cues from an unverified source.');
+
+    return result(
+      startTime,
+      'REVIEW',
+      Math.min(89, Math.max(70, Math.round(50 + (safeAmount > 0 && Number.isFinite(safeAmount) ? Math.log10(safeAmount + 1) * 8 : 25)))),
+      reasons,
+      'Autonomous execution paused. Human-in-the-Loop approval gate triggered. Out-of-band verification required.',
+      'P2',
+      [
+        `1. Hold Payment: Suspend transaction of $${Number.isFinite(safeAmount) ? safeAmount.toLocaleString() : 'unknown amount'} pending authorization.`,
+        '2. Voice Verification: Conduct direct verification with the verified vendor controller.',
+        '3. Dual Sign-off: Require Finance Manager approval in the governance portal.'
+      ]
+    );
+  }
+
+  if (agent.allowed_actions.length === 0 || !agent.allowed_actions.includes(action)) {
+    return result(
+      startTime,
+      'REVIEW',
+      65,
+      [`Action '${action}' is not in agent '${agent.name}' approved capability whitelist.`, 'Requires explicit capability expansion review.'],
+      'Action held for policy amendment approval.'
+    );
+  }
+
+  return result(
+    startTime,
+    'ALLOW',
+    15,
+    [`Action '${action}' matches the approved operating boundary.`, 'Deterministic safety guardrails, rate limits, and DLP checks passed.'],
+    'Action validated against approved safety policy. Logged to continuous telemetry stream.'
+  );
 }

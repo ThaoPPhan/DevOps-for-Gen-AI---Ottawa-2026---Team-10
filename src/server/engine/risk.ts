@@ -46,6 +46,11 @@ export interface RiskAnalysisResponse {
   suggested_profile: GeneratedSafetyProfile;
 }
 
+function keywordMatches(text: string, keyword: string): boolean {
+  if (keyword.includes(' ')) return text.includes(keyword);
+  return new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}\\b`, 'i').test(text);
+}
+
 const CAPABILITY_DEFINITIONS = [
   {
     id: 'cap_fin',
@@ -102,7 +107,7 @@ export function analyzeAgentRisk(description: string, agentName?: string, owner?
   
   // 1. Detect Capabilities
   const capabilities: CapabilityResult[] = CAPABILITY_DEFINITIONS.map(def => {
-    const detected = def.trigger_keywords.some(kw => text.includes(kw.toLowerCase()));
+    const detected = def.trigger_keywords.some(kw => keywordMatches(text, kw.toLowerCase()));
     return {
       ...def,
       detected
@@ -199,33 +204,49 @@ export function analyzeAgentRisk(description: string, agentName?: string, owner?
   const defaultAgentName = agentName || (text.includes('invoice') ? 'Invoice & Payment Agent' : text.includes('fraud') ? 'Fraud Detection Agent' : 'Autonomous Business Agent');
   const defaultOwner = owner || (text.includes('invoice') || text.includes('payment') ? 'Finance & AP Team' : 'Platform Operations Team');
 
-  // 4. Synthesize Proposed Safety Profile
+  // 4. Synthesize a profile from detected capabilities instead of returning
+  // invoice-specific permissions for every kind of agent.
+  const allowedActions = new Set<string>();
+  if (capabilities.find(c => c.id === 'cap_data')?.detected) {
+    allowedActions.add('read_data');
+    allowedActions.add('extract_metadata');
+  }
+  if (capabilities.find(c => c.id === 'cap_fin')?.detected) {
+    allowedActions.add('calculate_risk_score');
+    allowedActions.add('draft_payment_request');
+  }
+  if (capabilities.find(c => c.id === 'cap_vendor')?.detected) allowedActions.add('read_vendor_record');
+  if (capabilities.find(c => c.id === 'cap_ext_comm')?.detected) allowedActions.add('draft_external_message');
+  if (capabilities.find(c => c.id === 'cap_admin')?.detected) {
+    allowedActions.add('read_metrics');
+    allowedActions.add('notify_pagerduty');
+  }
+  if (allowedActions.size === 0) allowedActions.add('read_data');
+
+  const restrictedActions = new Set<string>([
+    'disable_audit_logging',
+    'delete_audit_records',
+    'raw_sql_execution',
+    'bypass_approval_threshold'
+  ]);
+  if (capabilities.find(c => c.id === 'cap_vendor')?.detected) restrictedActions.add('modify_bank_details_without_mfa');
+  if (capabilities.find(c => c.id === 'cap_fin')?.detected) restrictedActions.add('direct_wire_transfer_unapproved');
+  if (capabilities.find(c => c.id === 'cap_admin')?.detected) restrictedActions.add('modify_security_groups_all_open');
+
+  const requiredControls = new Set<string>(['audit_logging', 'rate_limiting']);
+  if (capabilities.find(c => c.id === 'cap_fin')?.detected) requiredControls.add('human_approval_over_5k');
+  if (capabilities.find(c => c.id === 'cap_vendor')?.detected) requiredControls.add('vendor_bank_change_dual_control');
+  if (capabilities.find(c => c.id === 'cap_ext_comm')?.detected || capabilities.find(c => c.id === 'cap_data')?.detected) requiredControls.add('pii_redaction');
+  if (capabilities.find(c => c.id === 'cap_admin')?.detected) requiredControls.add('break_glass_approval');
+
   const suggestedProfile: GeneratedSafetyProfile = {
     agent_name: defaultAgentName,
     owner: defaultOwner,
     purpose: description.trim(),
     risk_categories: detectedCaps.map(c => c.id),
-    allowed_actions: [
-      'read_invoice',
-      'extract_metadata',
-      'verify_tax_id',
-      'generate_receipt',
-      'draft_payment_request'
-    ],
-    restricted_actions: [
-      'disable_audit_logging',
-      'direct_wire_transfer_unapproved',
-      'modify_bank_details_without_mfa',
-      'raw_sql_execution',
-      'bypass_approval_threshold'
-    ],
-    required_controls: [
-      'human_approval_over_5k',
-      'vendor_bank_change_dual_control',
-      'audit_logging',
-      'rate_limiting',
-      'pii_redaction'
-    ],
+    allowed_actions: [...allowedActions],
+    restricted_actions: [...restrictedActions],
+    required_controls: [...requiredControls],
     max_transaction_limit: text.includes('invoice') || text.includes('payment') ? 5000 : 0,
     blast_radius: blastRadius,
     monitoring_requirements: [

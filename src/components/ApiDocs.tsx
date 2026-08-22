@@ -23,13 +23,14 @@ def execute_safe_action(agent_id, action_name, target_resource, payload, prompt_
     Evaluates in-flight agent actions through the AgenticScale Gateway.
     Returns: 'ALLOW', 'REVIEW', or 'BLOCK'
     """
-    url = "https://agenticscale.org/api/gateway/evaluate"
+    url = "https://agenticscale.pages.dev/api/gateway/evaluate"
     response = requests.post(url, json={
         "agent_id": agent_id,
         "action_name": action_name,
         "target_resource": target_resource,
         "payload": payload,
-        "prompt_input": prompt_input
+        "prompt_input": prompt_input,
+        "summary": f"{action_name} on {target_resource}"
     })
     
     result = response.json()
@@ -65,9 +66,9 @@ export async function evaluateAgentAction(params: {
   payload: Record<string, any>;
   prompt_input?: string;
 }) {
-  const res = await fetch('https://agenticscale.org/api/gateway/evaluate', {
+  const res = await fetch('https://agenticscale.pages.dev/api/gateway/evaluate', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-AgenticScale-Key': process.env.AGENTICSCALE_API_KEY ?? '' },
     body: JSON.stringify(params),
   });
 
@@ -78,8 +79,9 @@ export async function evaluateAgentAction(params: {
   return evaluation;
 }`;
 
-  const curlSnippet = `curl -X POST https://agenticscale.org/api/gateway/evaluate \\
+  const curlSnippet = `curl -X POST https://agenticscale.pages.dev/api/gateway/evaluate \\
   -H "Content-Type: application/json" \\
+  -H "X-AgenticScale-Key: $AGENTICSCALE_API_KEY" \\
   -d '{
     "agent_id": "agent-invoice-01",
     "action_name": "update_vendor_account",

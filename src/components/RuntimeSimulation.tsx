@@ -24,6 +24,7 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
   const [promptInput, setPromptInput] = useState<string>('Process standard monthly shipping invoice from approved supplier.');
   const [evaluating, setEvaluating] = useState<boolean>(false);
   const [result, setResult] = useState<any | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const presetScenarios = [
     {
@@ -115,6 +116,7 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
 
   const handleEvaluate = async (aid?: string, act?: string, target?: string, prompt?: string, customPayload?: any) => {
     setEvaluating(true);
+    setError(null);
     try {
       let parsedPayload = customPayload;
       if (!parsedPayload) {
@@ -137,6 +139,7 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
       setResult(res);
     } catch (err) {
       console.error('Error evaluating gateway action:', err);
+      setError(err instanceof Error ? err.message : 'Gateway evaluation failed.');
     } finally {
       setEvaluating(false);
     }
@@ -154,6 +157,12 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
           Observe how the AgenticScale Gateway intercepts in-flight AI agent actions, evaluates deterministic policies, and applies real-time interventions (ALLOW, REVIEW REQUIRED, or BLOCKED).
         </p>
       </div>
+
+      {error && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-300">
+          {error}
+        </div>
+      )}
 
       {/* Preset Demo Scenarios Grid */}
       <div className="space-y-3">

@@ -28,6 +28,7 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
   const [copiedJson, setCopiedJson] = useState<boolean>(false);
   const [savingProfile, setSavingProfile] = useState<boolean>(false);
   const [showRawJson, setShowRawJson] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   const presets = [
     {
@@ -64,11 +65,13 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
     if (!text.trim()) return;
 
     setLoading(true);
+    setError(null);
     try {
       const res = await api.reviewAgent(text, name, own);
       setAnalysisResult(res);
     } catch (err) {
       console.error('Error analyzing agent risk:', err);
+      setError(err instanceof Error ? err.message : 'Risk review is unavailable.');
     } finally {
       setLoading(false);
     }
@@ -80,7 +83,7 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
     try {
       const profile = analysisResult.suggested_profile;
       await api.saveAgent({
-        id: `agent-${Date.now().toString(36)}`,
+        id: `agent-${crypto.randomUUID()}`,
         name: profile.agent_name,
         owner: profile.owner,
         purpose: profile.purpose,
@@ -97,6 +100,7 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
       setActiveTab('profiles');
     } catch (err) {
       console.error('Error saving profile:', err);
+      setError(err instanceof Error ? err.message : 'Unable to save the generated profile.');
     } finally {
       setSavingProfile(false);
     }
@@ -127,6 +131,12 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
           Enter an AI agent concept or prompt description. AgenticScale will automatically classify underlying capabilities, identify critical failure modes, calculate blast radius, and generate enterprise safeguards.
         </p>
       </div>
+
+      {error && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-300">
+          {error}
+        </div>
+      )}
 
       {/* Input Section */}
       <div className="glass-panel p-6 rounded-2xl space-y-5">

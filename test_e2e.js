@@ -1,5 +1,9 @@
 // End-to-End Automated Test Suite for AgenticScale Production API
-const BASE_URL = 'https://agenticscale.pages.dev';
+const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:8788';
+
+if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(BASE_URL) && process.env.ALLOW_PRODUCTION_TESTS !== 'true') {
+  throw new Error('Refusing to run mutating E2E tests against a non-local URL. Set ALLOW_PRODUCTION_TESTS=true only for an intentional production test.');
+}
 
 async function runTests() {
   console.log(`\n🚀 Starting End-to-End Verification against: ${BASE_URL}\n`);
@@ -46,6 +50,26 @@ async function runTests() {
     if (!Array.isArray(initialAgents) || initialAgents.length === 0) {
       throw new Error(`Expected non-empty agents array, got ${JSON.stringify(initialAgents)}`);
     }
+  });
+
+  await test('POST /api/gateway/evaluate rejects unknown agents', async () => {
+    const res = await fetch(`${BASE_URL}/api/gateway/evaluate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        agent_id: 'agent-does-not-exist',
+        action_name: 'read_data',
+        target_resource: 'internal://unknown'
+      })
+    });
+    if (res.status !== 404) throw new Error(`Expected 404, got ${res.status}`);
+  });
+
+  await test('Rejects disallowed cross-origin requests', async () => {
+    const res = await fetch(`${BASE_URL}/api/agents`, {
+      headers: { Origin: 'https://malicious.example' }
+    });
+    if (res.status !== 403) throw new Error(`Expected 403, got ${res.status}`);
   });
 
   // 4. Module 1: Risk Review / Discovery Engine
@@ -231,24 +255,12 @@ async function runTests() {
     }
   });
 
-  // 14. Incidents & Runbook Resolution Check
-  await test('GET /api/incidents & POST /api/incidents/:id/resolve', async () => {
+  // 14. Incidents & Runbook Read Check (no production mutation)
+  await test('GET /api/incidents', async () => {
     const res = await fetch(`${BASE_URL}/api/incidents`);
     if (!res.ok) throw new Error(`Status ${res.status}`);
     const incidents = await res.json();
-    if (Array.isArray(incidents) && incidents.length > 0) {
-      const openInc = incidents.find(i => i.status === 'open');
-      if (openInc) {
-        const resResolve = await fetch(`${BASE_URL}/api/incidents/${openInc.id}/resolve`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'resolved' })
-        });
-        if (!resResolve.ok) throw new Error(`Resolve status ${resResolve.status}`);
-        const resolveData = await resResolve.json();
-        if (!resolveData.success) throw new Error(`Failed to resolve incident`);
-      }
-    }
+    if (!Array.isArray(incidents)) throw new Error(`Expected incidents array`);
   });
 
   console.log(`\n========================================`);

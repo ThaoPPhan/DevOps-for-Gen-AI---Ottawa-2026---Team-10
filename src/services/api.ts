@@ -2,96 +2,100 @@ import { Agent, Policy, SafetyEvent, Incident, DashboardStats } from '../types';
 
 const API_BASE = '/api';
 
+export interface ValidationHistoryRecord {
+  id: string;
+  agent_id: string;
+  agent_name?: string;
+  version: string;
+  status: 'passed' | 'flagged' | 'failed';
+  total_tests: number;
+  passed_tests: number;
+  failed_tests: number;
+  safety_score: number;
+  recommendation: string;
+  details_json: Record<string, unknown>;
+  created_at: string;
+}
+
+async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    credentials: 'same-origin',
+    ...init,
+    headers: {
+      Accept: 'application/json',
+      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(init?.headers || {})
+    }
+  });
+
+  const raw = await response.text();
+  let payload: unknown = null;
+  try {
+    payload = raw ? JSON.parse(raw) : null;
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    const message = payload && typeof payload === 'object' && 'error' in payload
+      ? String((payload as { error: unknown }).error)
+      : `Request failed with status ${response.status}.`;
+    throw new Error(message);
+  }
+
+  return payload as T;
+}
+
 export const api = {
-  async getHealth() {
-    const res = await fetch(`${API_BASE}/health`);
-    return res.json();
-  },
+  getHealth: () => requestJson<{ status: string; database: { status: string } }>('/health'),
 
-  async reviewAgent(description: string, agentName?: string, owner?: string) {
-    const res = await fetch(`${API_BASE}/review`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ description, agent_name: agentName, owner })
-    });
-    return res.json();
-  },
+  reviewAgent: (description: string, agentName?: string, owner?: string) => requestJson('/review', {
+    method: 'POST',
+    body: JSON.stringify({ description, agent_name: agentName, owner })
+  }),
 
-  async getAgents(): Promise<Agent[]> {
-    const res = await fetch(`${API_BASE}/agents`);
-    return res.json();
-  },
+  getAgents: () => requestJson<Agent[]>('/agents'),
 
-  async saveAgent(agentData: Partial<Agent>) {
-    const res = await fetch(`${API_BASE}/agents`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(agentData)
-    });
-    return res.json();
-  },
+  saveAgent: (agentData: Partial<Agent>) => requestJson<{ success: boolean; id: string }>('/agents', {
+    method: 'POST',
+    body: JSON.stringify(agentData)
+  }),
 
-  async getPolicies(): Promise<Policy[]> {
-    const res = await fetch(`${API_BASE}/policies`);
-    return res.json();
-  },
+  getPolicies: () => requestJson<Policy[]>('/policies'),
 
-  async validateAgent(agentId: string, agentName: string, version: string) {
-    const res = await fetch(`${API_BASE}/validate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ agent_id: agentId, agent_name: agentName, version })
-    });
-    return res.json();
-  },
+  validateAgent: (agentId: string, agentName: string, version: string) => requestJson('/validate', {
+    method: 'POST',
+    body: JSON.stringify({ agent_id: agentId, agent_name: agentName, version })
+  }),
 
-  async getValidationHistory() {
-    const res = await fetch(`${API_BASE}/validate/history`);
-    return res.json();
-  },
+  getValidationHistory: () => requestJson<ValidationHistoryRecord[]>('/validate/history'),
 
-  async evaluateGateway(payload: {
+  evaluateGateway: (payload: {
     agent_id: string;
     action_name: string;
-    target_resource?: string;
-    payload?: Record<string, any>;
+    target_resource: string;
+    payload?: Record<string, unknown>;
     prompt_input?: string;
     summary?: string;
-  }) {
-    const res = await fetch(`${API_BASE}/gateway/evaluate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    return res.json();
-  },
+  }) => requestJson('/gateway/evaluate', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  }),
 
-  async getDashboardStats(): Promise<DashboardStats> {
-    const res = await fetch(`${API_BASE}/dashboard/stats`);
-    return res.json();
-  },
+  getDashboardStats: () => requestJson<DashboardStats>('/dashboard/stats'),
 
-  async getEvents(params?: { decision?: string; agent_id?: string; limit?: number }): Promise<SafetyEvent[]> {
+  getEvents: (params?: { decision?: string; agent_id?: string; limit?: number }) => {
     const query = new URLSearchParams();
     if (params?.decision) query.set('decision', params.decision);
     if (params?.agent_id) query.set('agent_id', params.agent_id);
     if (params?.limit) query.set('limit', String(params.limit));
-
-    const res = await fetch(`${API_BASE}/events?${query.toString()}`);
-    return res.json();
+    return requestJson<SafetyEvent[]>(`/events?${query.toString()}`);
   },
 
-  async getIncidents(): Promise<Incident[]> {
-    const res = await fetch(`${API_BASE}/incidents`);
-    return res.json();
-  },
+  getIncidents: () => requestJson<Incident[]>('/incidents'),
 
-  async resolveIncident(id: string, status: string = 'resolved') {
-    const res = await fetch(`${API_BASE}/incidents/${id}/resolve`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status })
-    });
-    return res.json();
-  }
+  resolveIncident: (id: string, status: 'acknowledged' | 'resolved' = 'resolved') => requestJson<{ success: boolean }>(`/incidents/${id}/resolve`, {
+    method: 'POST',
+    body: JSON.stringify({ status })
+  })
 };
