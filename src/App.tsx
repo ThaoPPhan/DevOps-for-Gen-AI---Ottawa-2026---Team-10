@@ -193,6 +193,8 @@ export function App() {
     window.location.href = '/api/auth/logout';
   };
 
+  const hasWorkspaceAccess = Boolean(session?.authenticated || session?.demo_mode);
+
   if (sessionLoading) {
     return <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center text-sm text-slate-500">Loading secure workspace…</div>;
   }
@@ -214,14 +216,14 @@ export function App() {
 
         {/* Main Content View */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-grow">
-          {activeTab === 'dashboard' && (session?.authenticated ? <CentralDashboard setActiveTab={setActiveTab} /> : <PublicHome onSignIn={signIn} setActiveTab={setActiveTab} />)}
-          {activeTab === 'review' && (session?.authenticated ? <RiskReview setActiveTab={setActiveTab} /> : <SignInRequired onSignIn={signIn} />)}
-          {activeTab === 'profiles' && (session?.authenticated ? <SafetyProfiles setActiveTab={setActiveTab} /> : <SignInRequired onSignIn={signIn} />)}
-          {activeTab === 'validate' && (session?.authenticated ? <ReleaseValidation setActiveTab={setActiveTab} /> : <SignInRequired onSignIn={signIn} />)}
-          {activeTab === 'simulate' && (session?.authenticated ? <RuntimeSimulation setActiveTab={setActiveTab} /> : <SignInRequired onSignIn={signIn} />)}
+          {activeTab === 'dashboard' && (hasWorkspaceAccess ? <CentralDashboard setActiveTab={setActiveTab} /> : <PublicHome onSignIn={signIn} setActiveTab={setActiveTab} />)}
+          {activeTab === 'review' && (hasWorkspaceAccess ? <RiskReview setActiveTab={setActiveTab} /> : <SignInRequired onSignIn={signIn} />)}
+          {activeTab === 'profiles' && (hasWorkspaceAccess ? <SafetyProfiles setActiveTab={setActiveTab} /> : <SignInRequired onSignIn={signIn} />)}
+          {activeTab === 'validate' && (hasWorkspaceAccess ? <ReleaseValidation setActiveTab={setActiveTab} /> : <SignInRequired onSignIn={signIn} />)}
+          {activeTab === 'simulate' && (hasWorkspaceAccess ? <RuntimeSimulation setActiveTab={setActiveTab} /> : <SignInRequired onSignIn={signIn} />)}
           {activeTab === 'enterprise' && <EnterpriseArch />}
           {activeTab === 'api' && <ApiDocs />}
-          {activeTab === 'policies' && (session?.authenticated ? <PolicyRegistry /> : <SignInRequired onSignIn={signIn} />)}
+          {activeTab === 'policies' && (hasWorkspaceAccess ? <PolicyRegistry /> : <SignInRequired onSignIn={signIn} />)}
         </main>
 
       </div>

@@ -66,7 +66,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   getSession: () => requestJson<AuthSession>('/auth/session'),
-  getHealth: () => requestJson<{ status: string; database: { status: string }; capabilities?: { admin_auth_configured?: boolean; gateway_auth_configured?: boolean; organization_auth_configured?: boolean; provider?: string } }>('/health'),
+  getHealth: () => requestJson<{ status: string; database: { status: string }; capabilities?: { admin_auth_configured?: boolean; gateway_auth_configured?: boolean; organization_auth_configured?: boolean; demo_mode_available?: boolean; provider?: string } }>('/health'),
 
   reviewAgent: (description: string, agentName?: string, owner?: string) => requestJson('/review', {
     method: 'POST',

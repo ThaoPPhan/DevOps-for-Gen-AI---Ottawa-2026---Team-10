@@ -7,9 +7,9 @@
   ],
   "vars": {
     "APP_VERSION": "2.1.0",
-    "AUTH_REQUIRED": "true",
+    "AUTH_REQUIRED": "false",
     "AUTH_DOMAIN": "agenticscale.org",
-    "AUTH_TEAM_DOMAIN": "noobquestions.cloudflareaccess.com",
+    "AUTH_TEAM_DOMAIN": "agenticscale.cloudflareaccess.com",
     "AUTH_PROVIDER": "cloudflare_access"
   },
   "pages_build_output_dir": "./dist",

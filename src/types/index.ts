@@ -95,6 +95,7 @@ export interface DashboardStats {
 
 export interface AuthSession {
   authenticated: boolean;
+  demo_mode?: boolean;
   provider: string;
   login_url: string;
   user: { id: string; email: string; name: string } | null;

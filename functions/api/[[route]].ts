@@ -44,7 +44,7 @@ interface AuthContext {
   organizationId: string;
   organizationName: string;
   role: keyof typeof ROLE_ORDER;
-  source: 'cloudflare_access' | 'api-key' | 'development';
+  source: 'cloudflare_access' | 'api-key' | 'development' | 'demo';
 }
 
 function isAllowedOrigin(origin: string): boolean {
@@ -96,14 +96,15 @@ function isAuthRequired(env: Env): boolean {
 }
 
 function demoAuthContext(source: AuthContext['source'] = 'development'): AuthContext {
+  const isPublicDemo = source === 'demo';
   return {
-    userId: source === 'api-key' ? 'api-key-operator' : 'user-demo-admin',
-    subject: source === 'api-key' ? 'api-key:admin' : 'email:kelvinlingac@gmail.com',
-    email: source === 'api-key' ? 'operator@agenticscale.local' : 'kelvinlingac@gmail.com',
-    name: source === 'api-key' ? 'API Key Operator' : 'AgenticScale Demo Admin',
+    userId: source === 'api-key' ? 'api-key-operator' : isPublicDemo ? 'user-public-demo' : 'user-demo-admin',
+    subject: source === 'api-key' ? 'api-key:admin' : isPublicDemo ? 'demo:public' : 'email:kelvinlingac@gmail.com',
+    email: source === 'api-key' ? 'operator@agenticscale.local' : isPublicDemo ? 'demo@agenticscale.org' : 'kelvinlingac@gmail.com',
+    name: source === 'api-key' ? 'API Key Operator' : isPublicDemo ? 'Public demo' : 'AgenticScale Demo Admin',
     organizationId: 'org-demo-agenticscale',
     organizationName: 'AgenticScale Demo Organization',
-    role: 'owner',
+    role: isPublicDemo ? 'viewer' : 'owner',
     source
   };
 }
@@ -121,7 +122,8 @@ async function resolveAuth(c: any): Promise<AuthContext | null> {
   const accessEmail = request.headers.get('Cf-Access-Authenticated-User-Email') || '';
   const accessSubject = request.headers.get('Cf-Access-User-ID') || request.headers.get('Cf-Access-Authenticated-User-ID') || accessEmail;
   const accessName = request.headers.get('Cf-Access-Authenticated-User-Name') || accessEmail;
-  if (!accessEmail || (isAuthRequired(env) && host !== (env.AUTH_DOMAIN || 'agenticscale.org'))) return null;
+  if (!accessEmail) return isAuthRequired(env) ? null : demoAuthContext('demo');
+  if (isAuthRequired(env) && host !== (env.AUTH_DOMAIN || 'agenticscale.org')) return null;
 
   const user: any = await env.DB.prepare(`
     SELECT u.id as user_id, u.subject, u.email, u.name, o.id as organization_id, o.name as organization_name, m.role
@@ -340,7 +342,8 @@ app.get('/api/health', async (c) => {
       capabilities: {
         admin_auth_configured: Boolean(c.env.ADMIN_API_KEY),
         gateway_auth_configured: Boolean(c.env.GATEWAY_API_KEY),
-        organization_auth_configured: Boolean(c.env.AUTH_REQUIRED === 'true'),
+        organization_auth_configured: Boolean(c.env.AUTH_PROVIDER),
+        demo_mode_available: c.env.AUTH_REQUIRED !== 'true',
         provider: c.env.AUTH_PROVIDER || 'development'
       },
       timestamp: new Date().toISOString()
@@ -362,10 +365,11 @@ app.get('/api/auth/session', async (c) => {
   const requestOrigin = new URL(c.req.url).origin;
   const loginOrigin = isLocalRequest(c.req.raw) ? requestOrigin : `https://${c.env.AUTH_DOMAIN || 'agenticscale.org'}`;
   return c.json({
-    authenticated: Boolean(auth),
-    provider: c.env.AUTH_PROVIDER || 'development',
+    authenticated: Boolean(auth && auth.source !== 'demo'),
+    demo_mode: auth?.source === 'demo',
+    provider: auth?.source === 'demo' ? 'demo' : c.env.AUTH_PROVIDER || 'development',
     login_url: `${loginOrigin}/api/auth/login?returnTo=%2F`,
-    user: auth ? { id: auth.userId, email: auth.email, name: auth.name } : null,
+    user: auth && auth.source !== 'demo' ? { id: auth.userId, email: auth.email, name: auth.name } : null,
     organization: auth ? { id: auth.organizationId, name: auth.organizationName, role: auth.role } : null
   });
 });
@@ -374,7 +378,7 @@ app.get('/api/auth/login', async (c) => {
   const auth = c.get('auth') as AuthContext | null;
   const returnTo = c.req.query('returnTo') || '/';
   const safeReturnTo = returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/';
-  if (!auth && !isLocalRequest(c.req.raw)) {
+  if ((!auth || auth.source === 'demo') && !isLocalRequest(c.req.raw)) {
     // An interrupted Access flow can leave a browser with a partial app session.
     // Clear it before sending the browser back through the protected path so the
     // user sees the provider login page instead of an implementation error.
@@ -395,7 +399,7 @@ app.get('/api/auth/logout', async (c) => {
 
 app.post('/api/auth/admin', async (c) => {
   const auth = c.get('auth') as AuthContext | null;
-  if (!auth) return c.json({ error: 'Sign in through the organization login to continue.', code: 'AUTH_REQUIRED' }, 401);
+  if (!auth || auth.source === 'demo') return c.json({ error: 'Sign in through the organization login to continue.', code: 'AUTH_REQUIRED' }, 401);
   return c.json({ authenticated: true, message: 'Organization session verified.', organization: auth.organizationName, role: auth.role });
 });
 

@@ -159,7 +159,7 @@ npx wrangler secret put GATEWAY_API_KEY
 npx wrangler secret put ALERT_WEBHOOK_URL
 ```
 
-The public dashboard is read-only and does not present a user login. When `ADMIN_API_KEY` is configured, the navbar exposes a temporary operator-mode control for profile writes, validation runs, policy changes, profile archival/restoration, and incident decisions; the console verifies the key before marking the session active. This shared-key mechanism is suitable for the prototype only. External gateway callers require `GATEWAY_API_KEY`. Configure both production secrets before using the console for real operational data.
+The prototype opens in a public demo mode so visitors can see the full workflow before signing in. Unauthenticated requests are scoped to the seeded `AgenticScale Demo Organization`; the demo role is read-only for workspace changes, while the gateway simulator can generate demo telemetry. Organization users sign in through Cloudflare Access at `agenticscale.cloudflareaccess.com`, and authenticated requests are scoped to their organization membership. Set `AUTH_REQUIRED` to `true` for a production deployment that should require login before any workspace API is served. External gateway callers require `GATEWAY_API_KEY`.
 
 ### Python Example
 ```python
@@ -217,4 +217,4 @@ MIT License. Built for the DevOps for GenAI Hackathon 2026.
 - The dashboard refreshes D1 telemetry on a short polling interval. It is not a WebSocket stream.
 - Notifications are optional and require `ALERT_WEBHOOK_URL`; no Slack, PagerDuty, SIEM, or EventBridge integration is bundled by default.
 - Archived profiles can be restored from the Profiles console; archival preserves their history and removes them from the active fleet.
-- API mutations are protected by the admin key in production. Use Cloudflare Access or an identity provider before exposing this to multiple organizations.
+- Demo mode is intended for presentations only. Before operating with real organizational data, enable `AUTH_REQUIRED=true`, configure an identity provider and membership provisioning, and keep mutations behind role checks.
