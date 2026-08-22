@@ -21,11 +21,12 @@ interface NavbarProps {
   isDark: boolean;
   setIsDark: (dark: boolean) => void;
   adminAuthenticated: boolean;
+  adminConfigured: boolean;
   adminKeyStatus: 'idle' | 'checking' | 'valid' | 'invalid';
   onAdminKeyChange: (key: string) => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isDark, setIsDark, adminAuthenticated, adminKeyStatus, onAdminKeyChange }) => {
+export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isDark, setIsDark, adminAuthenticated, adminConfigured, adminKeyStatus, onAdminKeyChange }) => {
   const [showAdminAccess, setShowAdminAccess] = React.useState(false);
   const [draftKey, setDraftKey] = React.useState('');
   const navItems = [
@@ -84,16 +85,16 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isDark,
             <div className="hidden lg:block w-px h-5 bg-slate-200 dark:bg-slate-800 mx-1"></div>
 
             {/* Theme Toggle */}
-            <button
+            {adminConfigured && <button
               type="button"
               onClick={() => setShowAdminAccess(true)}
               className={`h-9 px-2.5 rounded-lg border flex items-center gap-1.5 text-[11px] font-semibold transition-all ${adminAuthenticated ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/30 dark:text-emerald-300' : 'bg-slate-100 border-slate-200 text-slate-600 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'}`}
-              aria-label={adminAuthenticated ? 'Manage admin access' : 'Enter admin access key'}
-              title={adminAuthenticated ? 'Admin access active' : 'Admin access required for profile and incident changes'}
+              aria-label={adminAuthenticated ? 'Manage admin operator mode' : 'Enable admin operator mode'}
+              title={adminAuthenticated ? 'Admin operator mode active' : 'Enable temporary operator mode'}
             >
               <KeyRound className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">{adminKeyStatus === 'checking' ? 'Checking…' : adminAuthenticated ? 'Admin' : 'Access'}</span>
-            </button>
+            </button>}
             <button
               onClick={() => setIsDark(!isDark)}
               className="h-9 w-9 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300 transition-all shadow-sm shrink-0"
@@ -139,25 +140,25 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isDark,
           <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl p-6 space-y-4">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 id="admin-access-title" className="font-bold text-slate-900 dark:text-white">Admin access</h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Required for profile changes, validation runs, and incident decisions. The key is kept only for this browser session.</p>
+                <h2 id="admin-access-title" className="font-bold text-slate-900 dark:text-white">Enable admin operator mode</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">This is not a user login. The dashboard remains available read-only; operator mode is only for profile changes, validation, policy controls, and incident decisions. The key is kept only for this browser session.</p>
               </div>
               <button type="button" onClick={() => setShowAdminAccess(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white" aria-label="Close admin access dialog">×</button>
             </div>
-            <label htmlFor="admin-api-key" className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">ADMIN_API_KEY</label>
+            <label htmlFor="admin-api-key" className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">Operator session key</label>
             <input
               id="admin-api-key"
               type="password"
               value={draftKey}
               onChange={(event) => setDraftKey(event.target.value)}
               onKeyDown={(event) => { if (event.key === 'Enter') { onAdminKeyChange(draftKey); setDraftKey(''); setShowAdminAccess(false); } }}
-              placeholder="Paste the configured Cloudflare secret"
+              placeholder="Paste the configured operator key"
               className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
               autoFocus
             />
             <div className="flex justify-end gap-2">
               {adminAuthenticated && <button type="button" onClick={() => { onAdminKeyChange(''); setDraftKey(''); setShowAdminAccess(false); }} className="px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-1.5"><LogOut className="w-3.5 h-3.5" />Sign out</button>}
-              <button type="button" onClick={() => { onAdminKeyChange(draftKey); setDraftKey(''); setShowAdminAccess(false); }} className="px-4 py-2 rounded-lg text-xs font-bold bg-brand-600 text-white hover:bg-brand-500">Save access key</button>
+              <button type="button" onClick={() => { onAdminKeyChange(draftKey); setDraftKey(''); setShowAdminAccess(false); }} className="px-4 py-2 rounded-lg text-xs font-bold bg-brand-600 text-white hover:bg-brand-500">Enable operator mode</button>
             </div>
             {adminKeyStatus === 'invalid' && <p role="alert" className="text-xs text-rose-700 dark:text-rose-300">That key could not be verified. Check the Cloudflare secret and try again.</p>}
             {adminKeyStatus === 'valid' && <p className="text-xs text-emerald-700 dark:text-emerald-300">Admin key verified for this browser session.</p>}

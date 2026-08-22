@@ -233,6 +233,10 @@ app.get('/api/health', async (c) => {
       platform: 'AgenticScale Continuous Safety Assurance',
       runtime: 'Cloudflare Pages Functions / Workers Edge',
       database: { status: 'connected', registered_agents: result?.count ?? 0 },
+      capabilities: {
+        admin_auth_configured: Boolean(c.env.ADMIN_API_KEY),
+        gateway_auth_configured: Boolean(c.env.GATEWAY_API_KEY)
+      },
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -241,6 +245,7 @@ app.get('/api/health', async (c) => {
       status: 'degraded',
       version: c.env.APP_VERSION || APP_VERSION,
       database: { status: 'unavailable' },
+      capabilities: { admin_auth_configured: false, gateway_auth_configured: false },
       timestamp: new Date().toISOString()
     }, 503);
   }

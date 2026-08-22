@@ -159,7 +159,7 @@ npx wrangler secret put GATEWAY_API_KEY
 npx wrangler secret put ALERT_WEBHOOK_URL
 ```
 
-The dashboard is readable without a login for demonstration purposes. Profile writes, validation runs, profile archival/restoration, and incident decisions require an authenticated `ADMIN_API_KEY` entered through the session-only Admin Access control; the console verifies the key before marking the session active. External gateway callers require `GATEWAY_API_KEY`. Configure both production secrets before using the console for real operational data.
+The public dashboard is read-only and does not present a user login. When `ADMIN_API_KEY` is configured, the navbar exposes a temporary operator-mode control for profile writes, validation runs, policy changes, profile archival/restoration, and incident decisions; the console verifies the key before marking the session active. This shared-key mechanism is suitable for the prototype only. External gateway callers require `GATEWAY_API_KEY`. Configure both production secrets before using the console for real operational data.
 
 ### Python Example
 ```python

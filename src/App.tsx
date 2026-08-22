@@ -90,6 +90,7 @@ export function App() {
   const [activeTab, setActiveTabState] = useState<string>(() => routeToTab[window.location.pathname] || 'dashboard');
   const [adminKey, setAdminKeyState] = useState<string>(() => getAdminKey());
   const [adminKeyStatus, setAdminKeyStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
+  const [adminConfigured, setAdminConfigured] = useState(false);
   const [isDark, setIsDark] = useState<boolean>(() => {
     const stored = localStorage.getItem('agenticscale_theme');
     return stored === 'dark';
@@ -129,6 +130,18 @@ export function App() {
     return () => { active = false; };
   }, [adminKey]);
 
+  useEffect(() => {
+    let active = true;
+    api.getHealth()
+      .then((health) => {
+        if (active) setAdminConfigured(health.capabilities?.admin_auth_configured === true);
+      })
+      .catch(() => {
+        if (active) setAdminConfigured(false);
+      });
+    return () => { active = false; };
+  }, []);
+
   const setActiveTab = (tab: string) => {
     const nextPath = tabToRoute[tab] || '/';
     if (window.location.pathname !== nextPath) window.history.pushState({}, '', nextPath);
@@ -152,6 +165,7 @@ export function App() {
           isDark={isDark}
           setIsDark={setIsDark}
           adminAuthenticated={Boolean(adminKey)}
+          adminConfigured={adminConfigured}
           adminKeyStatus={adminKeyStatus}
           onAdminKeyChange={handleAdminKey}
         />
