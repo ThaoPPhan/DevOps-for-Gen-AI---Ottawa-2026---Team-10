@@ -374,7 +374,14 @@ app.get('/api/auth/login', async (c) => {
   const auth = c.get('auth') as AuthContext | null;
   const returnTo = c.req.query('returnTo') || '/';
   const safeReturnTo = returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/';
-  if (!auth && !isLocalRequest(c.req.raw)) return c.json({ error: 'Sign-in is handled by the organization identity service.', code: 'AUTH_REQUIRED' }, 401);
+  if (!auth && !isLocalRequest(c.req.raw)) {
+    // An interrupted Access flow can leave a browser with a partial app session.
+    // Clear it before sending the browser back through the protected path so the
+    // user sees the provider login page instead of an implementation error.
+    c.header('Cache-Control', 'no-store');
+    c.header('Set-Cookie', 'CF_AppSession=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax');
+    return c.redirect(`/api/auth/login?returnTo=${encodeURIComponent(safeReturnTo)}`, 302);
+  }
   return c.redirect(safeReturnTo, 302);
 });
 
