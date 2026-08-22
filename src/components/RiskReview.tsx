@@ -132,10 +132,10 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-          AI Agent Risk Discovery & Threat Modeling
+          Risk review
         </h1>
         <p className="text-slate-600 dark:text-slate-400 text-sm mt-1.5 max-w-3xl">
-          Enter an AI agent concept or prompt description. AgenticScale will automatically classify underlying capabilities, identify critical failure modes, calculate blast radius, and generate enterprise safeguards.
+          Describe what an agent should do to see its risk level, likely failure modes, and recommended safeguards.
         </p>
       </div>
 
@@ -151,7 +151,7 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
         {/* Preset Selector */}
         <div>
           <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block mb-2">
-            Select Demonstration Scenario:
+            Try a scenario:
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
             {presets.map((p, i) => (
@@ -219,7 +219,7 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
             className="px-6 py-2.5 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white shadow-md shadow-brand-500/20 transition-all flex items-center space-x-2"
           >
             <Sparkles className="w-4 h-4" />
-            <span>{loading ? 'Analyzing Risks & Capabilities...' : 'Execute Risk Review'}</span>
+            <span>{loading ? 'Reviewing…' : 'Run risk review'}</span>
           </button>
         </div>
       </div>
@@ -271,8 +271,8 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
 
           {/* Capability Detection Grid */}
           <div className="glass-panel p-6 rounded-2xl">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">Detected Capabilities</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Underlying system privileges identified from description</p>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">What this agent can do</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Capabilities identified from the description</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {analysisResult.capabilities.map((cap: any) => (
@@ -302,8 +302,8 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
 
           {/* Discovered Risks & Recommended Safeguards */}
           <div className="glass-panel p-6 rounded-2xl">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">Discovered Threat Scenarios & Safeguards</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Failure mode modeling and mitigation controls</p>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">Risks and safeguards</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Likely failure modes and ways to reduce them</p>
 
             <div className="space-y-4">
               {analysisResult.risks.map((risk: any) => (
@@ -332,9 +332,9 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
                   </div>
 
                   <div className="p-3 rounded-lg bg-brand-50 dark:bg-brand-950/20 border border-brand-200 dark:border-brand-800/30">
-                    <span className="text-brand-800 dark:text-brand-300 font-bold block mb-1.5 flex items-center space-x-1">
+                      <span className="text-brand-800 dark:text-brand-300 font-bold block mb-1.5 flex items-center space-x-1">
                       <ShieldCheck className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
-                      <span>Recommended Safeguards & Controls:</span>
+                      <span>Recommended safeguards</span>
                     </span>
                     <ul className="space-y-1 text-slate-700 dark:text-slate-300 text-[11px] list-disc list-inside">
                       {risk.recommended_safeguards.map((sg: string, idx: number) => (

@@ -176,7 +176,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
               onClick={() => setActiveTab('review')}
               className="px-4 py-2.5 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white shadow-md shadow-brand-500/20 transition-all flex items-center space-x-2"
             >
-              <span>+ Risk Review New Agent</span>
+              <span>Start risk review</span>
               <ArrowRight className="w-4 h-4" />
             </button>
             <button
@@ -204,61 +204,57 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
       )}
 
       {/* KPI Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
         
-        <div className="glass-card p-5 rounded-xl">
+        <div className="glass-card min-w-0 p-5 rounded-xl">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Total Fleet Agents</span>
             <Server className="w-4 h-4 text-brand-600 dark:text-brand-400" />
           </div>
-          <div className="mt-3 flex items-baseline space-x-2">
-            <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">
               {stats.fleet.total_agents}
             </span>
-            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">Active</span>
+            <span className="text-sm text-emerald-600 dark:text-emerald-400 font-semibold">Active</span>
           </div>
-              <div className="mt-2 flex items-center space-x-2 text-[11px] text-slate-500 dark:text-slate-400">
+          <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
             <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{stats.fleet.protected} Protected</span>
-            <span>•</span>
             <span className="text-blue-600 dark:text-blue-400 font-semibold">{stats.fleet.monitoring} Monitoring</span>
-            <span>•</span>
-            <span className="text-amber-600 dark:text-amber-400 font-semibold">{stats.fleet.at_risk} At Risk</span>
-            <span>•</span>
+            <span className="text-amber-600 dark:text-amber-400 font-semibold">{stats.fleet.at_risk} At risk</span>
             <span className="text-rose-600 dark:text-rose-400 font-semibold">{stats.fleet.quarantined} Quarantined</span>
           </div>
         </div>
 
-        <div className="glass-card p-5 rounded-xl">
+        <div className="glass-card min-w-0 p-5 rounded-xl">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Safety Interventions</span>
             <TrendingUp className="w-4 h-4 text-amber-500 dark:text-amber-400" />
           </div>
-          <div className="mt-3 flex items-baseline space-x-2">
-            <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">
               {stats.telemetry.interventions_rate}%
             </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Actions Filtered</span>
+            <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">Filtered actions</span>
           </div>
-          <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
-            <span className="text-amber-600 dark:text-amber-400 font-semibold">{stats.telemetry.reviewed} Held for Review</span>
-            <span className="mx-1">•</span>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="text-amber-600 dark:text-amber-400 font-semibold">{stats.telemetry.reviewed} Review</span>
             <span className="text-rose-600 dark:text-rose-400 font-semibold">{stats.telemetry.blocked} Blocked</span>
           </div>
         </div>
 
-        <div className="glass-card p-5 rounded-xl">
+        <div className="glass-card min-w-0 p-5 rounded-xl">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Open Incidents</span>
             <ShieldAlert className="w-4 h-4 text-rose-500 dark:text-rose-400" />
           </div>
-          <div className="mt-3 flex items-baseline space-x-2">
-            <span className="text-3xl font-extrabold text-rose-600 dark:text-rose-400">
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-3xl sm:text-4xl font-extrabold text-rose-600 dark:text-rose-400">
               {stats.incidents.open_count}
             </span>
             <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Active</span>
           </div>
-          <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
-            <span>Remediation runbooks active</span>
+          <div className="mt-3 text-[11px] text-slate-500 dark:text-slate-400">
+            <span>Needs attention</span>
           </div>
         </div>
 
@@ -268,9 +264,9 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
         {/* Left Column: Fleet Inventory (6 cols) */}
-        <div className="lg:col-span-6">
+        <div className="lg:col-span-6 min-w-0">
           <div className="glass-panel p-6 rounded-2xl space-y-4">
-            <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800/80">
+            <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 pb-1 border-b border-slate-100 dark:border-slate-800/80">
               <div>
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white">AI Agent Inventory</h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Governance status, owners, and operating boundaries</p>
@@ -290,8 +286,8 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
                   key={agent.id}
                   className="glass-card p-4 rounded-xl hover:border-brand-300 dark:hover:border-slate-700 transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
                 >
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-2">
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <span className="font-bold text-sm text-slate-900 dark:text-white">{agent.name}</span>
                       <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
                         {agent.version}
@@ -299,9 +295,8 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
                       {getStatusBadge(agent.status)}
                     </div>
                     <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-1">{agent.purpose}</p>
-                    <div className="flex items-center space-x-3 text-[11px] text-slate-500">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
                       <span>Owner: {agent.owner}</span>
-                      <span>•</span>
                       <span>Limit: ${(agent.max_transaction_limit || 0).toLocaleString()}</span>
                     </div>
                   </div>
@@ -325,11 +320,11 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
         </div>
 
         {/* Right Column: Live Safety Events (6 cols) */}
-        <div className="lg:col-span-6">
+        <div className="lg:col-span-6 min-w-0">
           <div className="glass-panel p-6 rounded-2xl space-y-4">
             
             {/* Header */}
-            <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800/80">
+            <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 pb-1 border-b border-slate-100 dark:border-slate-800/80">
               <div>
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center space-x-2">
                   <span>Live Safety Events</span>
@@ -466,8 +461,8 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
                 <ShieldAlert className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">Active Safety Incidents & Operational Runbooks</h3>
-                <p className="text-xs text-slate-600 dark:text-slate-400">Actions flagged or blocked by AgenticScale requiring human resolution</p>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Incidents needing attention</h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400">Review flagged or blocked actions here.</p>
               </div>
             </div>
           </div>
@@ -488,7 +483,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
                 <p className="text-slate-700 dark:text-slate-300 text-xs">{inc.summary}</p>
 
                 <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 space-y-1 text-[11px]">
-                  <div className="text-brand-700 dark:text-brand-300 font-semibold mb-1">Operational Runbook Remediation:</div>
+                  <div className="text-brand-700 dark:text-brand-300 font-semibold mb-1">Recommended response:</div>
                   {(Array.isArray(inc.runbook_steps) ? inc.runbook_steps : []).map((step, idx) => (
                     <div key={idx} className="text-slate-700 dark:text-slate-300">{step}</div>
                   ))}

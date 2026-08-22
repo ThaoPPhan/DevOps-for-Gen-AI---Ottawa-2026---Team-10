@@ -6,7 +6,6 @@ import {
   Check, 
   DollarSign,
   Archive,
-  History
 } from 'lucide-react';
 import { Agent } from '../types';
 import { api } from '../services/api';
@@ -190,10 +189,10 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Safety Profiles & Operating Boundaries
+            Safety profiles
           </h1>
           <p className="text-slate-600 dark:text-slate-400 text-sm mt-1.5">
-            Define permissions, restricted actions, transaction caps, and governance controls for enterprise agents.
+            Set what each agent can do, what it must not do, and when a person must approve an action.
           </p>
         </div>
 
@@ -209,7 +208,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
             onClick={() => setActiveTab('review')}
             className="px-4 py-2 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white shadow-sm transition-all"
           >
-            <span>+ Review From Prompt</span>
+            <span>Review from prompt</span>
           </button>
         </div>
       </div>
@@ -224,8 +223,8 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         {/* Left: Agent Selection List (4 cols) */}
-        <div className="lg:col-span-4 space-y-3">
-          <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Registered Agent Profiles</h2>
+        <div className="lg:col-span-4 min-w-0 space-y-3">
+          <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Active profiles</h2>
           
           <div className="space-y-2">
             {!loading && agents.length === 0 && !error && (
@@ -260,7 +259,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
           </div>
 
           {archivedAgents.length > 0 && <div className="mt-6 space-y-2">
-            <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Archived Profiles</h2>
+            <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Archived</h2>
             {archivedAgents.map((agent) => <div key={agent.id} className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-3 text-xs">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -274,14 +273,14 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
         </div>
 
         {/* Right: Active Profile Editor (8 cols) */}
-        <div className="lg:col-span-8">
+        <div className="lg:col-span-8 min-w-0">
           {selectedAgent ? (
             <div className="glass-panel p-6 sm:p-8 rounded-2xl space-y-6">
               
               <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Edit Safety Profile: {editName}</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Owner: {editOwner} • Version {editVersion}</p>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Edit profile: {editName}</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{editOwner} · {editVersion}</p>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -341,7 +340,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
               </div>
 
               <div>
-                <label htmlFor="profile-version" className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Profile / Release Version</label>
+                <label htmlFor="profile-version" className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Version</label>
                 <input id="profile-version" value={editVersion} onChange={(e) => setEditVersion(e.target.value)} placeholder="v1.0.0" className="w-full sm:w-1/2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
               </div>
 
@@ -356,10 +355,10 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
                     onChange={(e: any) => setEditStatus(e.target.value)}
                     className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 shadow-sm"
                   >
-                    <option value="protected">Protected (Guarded)</option>
-                    <option value="monitoring">Monitoring Only</option>
+                    <option value="protected">Protected</option>
+                    <option value="monitoring">Monitoring</option>
                     <option value="at_risk">At-Risk</option>
-                    <option value="quarantined">Quarantined (Blocked)</option>
+                    <option value="quarantined">Quarantined</option>
                   </select>
                 </div>
 
@@ -397,7 +396,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                 <div>
                     <label htmlFor="profile-allowed-actions" className="text-xs font-bold text-emerald-700 dark:text-emerald-400 block mb-1 flex items-center space-x-1">
-                    <span>Allowed Capabilities Whitelist</span>
+                    <span>Allowed actions</span>
                   </label>
                   <textarea
                     id="profile-allowed-actions"
@@ -411,7 +410,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
 
                 <div>
                     <label htmlFor="profile-restricted-actions" className="text-xs font-bold text-rose-700 dark:text-rose-400 block mb-1 flex items-center space-x-1">
-                    <span>Restricted Actions / Blacklist</span>
+                    <span>Blocked actions</span>
                   </label>
                   <textarea
                     id="profile-restricted-actions"
@@ -427,7 +426,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
               {/* Required Controls */}
               <div>
                 <label htmlFor="profile-controls" className="text-xs font-bold text-brand-700 dark:text-brand-300 block mb-1">
-                  Required Governance Controls
+                  Required safeguards
                 </label>
                 <textarea
                   id="profile-controls"
@@ -439,22 +438,17 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label htmlFor="profile-change-reason" className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Change reason</label>
                   <input id="profile-change-reason" value={changeReason} onChange={(e) => setChangeReason(e.target.value)} placeholder="Why is this boundary changing?" className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
                 </div>
-                <div className="rounded-xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 p-3 text-[11px] text-slate-600 dark:text-slate-400">
-                  <div className="font-bold text-slate-800 dark:text-slate-200 mb-1">Generated governance metadata</div>
-                  <div>Risk categories: {(selectedAgent.risk_categories || []).join(', ') || 'Not recorded'}</div>
-                  <div>Monitoring: {(selectedAgent.monitoring_requirements || []).join(', ') || 'Not recorded'}</div>
-                </div>
               </div>
 
-              <div className="border-t border-slate-200 dark:border-slate-800 pt-4">
-                <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2"><History className="w-4 h-4 text-slate-400" /> Profile history</h4>
-                {historyLoading ? <p className="text-xs text-slate-500 mt-2">Loading profile history…</p> : profileHistory.length === 0 ? <p className="text-xs text-slate-500 mt-2">No version history is available yet.</p> : <div className="mt-2 space-y-2">{profileHistory.slice(0, 5).map((entry) => <div key={entry.id} className="rounded-lg bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 px-3 py-2 text-[11px]"><div className="flex justify-between gap-2"><span className="font-mono font-semibold">{entry.version}</span><span className="text-slate-500">{new Date(entry.created_at).toLocaleString()}</span></div><div className="text-slate-600 dark:text-slate-400 mt-1">{entry.change_reason || 'Profile change recorded.'}</div></div>)}</div>}
-              </div>
+              <details className="border-t border-slate-200 dark:border-slate-800 pt-4">
+                <summary className="cursor-pointer list-none text-sm font-bold text-slate-900 dark:text-white">View profile history</summary>
+                {historyLoading ? <p className="text-xs text-slate-500 mt-2">Loading profile history…</p> : profileHistory.length === 0 ? <p className="text-xs text-slate-500 mt-2">No version history is available yet.</p> : <div className="mt-2 space-y-2">{profileHistory.slice(0, 5).map((entry) => <div key={entry.id} className="rounded-lg bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 px-3 py-2 text-[11px]"><div className="flex flex-wrap justify-between gap-2"><span className="font-mono font-semibold">{entry.version}</span><span className="text-slate-500">{new Date(entry.created_at).toLocaleString()}</span></div><div className="text-slate-600 dark:text-slate-400 mt-1">{entry.change_reason || 'Profile change recorded.'}</div></div>)}</div>}
+              </details>
 
             </div>
           ) : (

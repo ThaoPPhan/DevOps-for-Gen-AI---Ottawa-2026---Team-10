@@ -14,25 +14,25 @@ export const EnterpriseArch: React.FC = () => {
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-          Enterprise Architecture & Scaling Roadmap
+          How AgenticScale scales
         </h1>
         <p className="text-slate-600 dark:text-slate-400 text-sm mt-1.5 max-w-3xl">
-          Architectural evolution mapping lightweight edge guarantees into enterprise-scale multi-cloud AI agent safety infrastructure.
+          See how the current edge deployment maps to a larger enterprise safety platform.
         </p>
       </div>
 
       {/* Cloudflare vs Enterprise Mapping Table */}
       <div className="glass-panel p-6 sm:p-8 rounded-2xl space-y-6">
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white">Component Architecture Matrix</h2>
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white">Platform overview</h2>
         
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
               <tr>
                 <th className="py-3 px-4">Architecture Layer</th>
-                <th className="py-3 px-4 text-brand-700 dark:text-brand-400 font-bold">Edge Prototype (Current Live)</th>
-                <th className="py-3 px-4 text-indigo-700 dark:text-indigo-400 font-bold">Enterprise Expansion (Future Scale)</th>
-                <th className="py-3 px-4">Key Safety Guarantee</th>
+                <th className="py-3 px-4 text-brand-700 dark:text-brand-400 font-bold">Current deployment</th>
+                <th className="py-3 px-4 text-indigo-700 dark:text-indigo-400 font-bold">Enterprise option</th>
+                <th className="py-3 px-4">Safety benefit</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium text-slate-700 dark:text-slate-300">
@@ -81,7 +81,7 @@ export const EnterpriseArch: React.FC = () => {
       <div className="glass-panel p-6 sm:p-8 rounded-2xl space-y-6">
         <div className="flex items-center space-x-2">
           <FileCheck className="w-5 h-5 text-brand-600 dark:text-brand-400" />
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Continuous AI Agent Safety Lifecycle</h2>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Safety lifecycle</h2>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">

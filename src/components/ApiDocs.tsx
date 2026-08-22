@@ -109,16 +109,16 @@ export async function evaluateAgentAction(params: {
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-          AgenticScale Safety Gateway API
+          Safety Gateway API
         </h1>
         <p className="text-slate-600 dark:text-slate-400 text-sm mt-1.5 max-w-3xl">
-          Integrate continuous safety assurance into any AI agent framework (LangChain, LlamaIndex, CrewAI, AutoGen, or custom LLM loops).
+          Connect any AI agent to the gateway before it performs a sensitive action.
         </p>
         <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200">
-          External gateway callers must send <code className="font-mono">X-AgenticScale-Key</code> using the configured <code className="font-mono">GATEWAY_API_KEY</code>. The public console is read-only; operator actions require a configured <code className="font-mono">ADMIN_API_KEY</code> and temporary operator mode.
+          Keep the gateway key on your server. Send it in <code className="font-mono">X-AgenticScale-Key</code> when calling the evaluation endpoint.
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
-          Available endpoints: <code className="font-mono">POST /api/review</code>, <code className="font-mono">GET/POST /api/agents</code>, <code className="font-mono">POST /api/validate</code>, <code className="font-mono">POST /api/validate/:id/release</code>, <code className="font-mono">POST /api/gateway/evaluate</code>, <code className="font-mono">GET /api/events</code>, and <code className="font-mono">GET /api/incidents</code>. Admin sessions can verify with <code className="font-mono">POST /api/auth/admin</code> and restore archived profiles with <code className="font-mono">POST /api/agents/:id/restore</code>.
+          Start with <code className="font-mono">POST /api/gateway/evaluate</code> to check an action. The other endpoints support reviews, profiles, validation, events, and incidents.
         </div>
       </div>
 

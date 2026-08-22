@@ -161,10 +161,10 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-          Runtime Gateway & Live Attack Simulator
+          Action simulator
         </h1>
         <p className="text-slate-600 dark:text-slate-400 text-sm mt-1.5 max-w-3xl">
-          Observe how the AgenticScale Gateway intercepts in-flight AI agent actions, evaluates deterministic policies, and applies real-time interventions (ALLOW, REVIEW REQUIRED, or BLOCKED).
+          Test an agent action and see whether it is allowed, held for review, or blocked.
         </p>
       </div>
 
@@ -177,7 +177,7 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
       {/* Preset Demo Scenarios Grid */}
       <div className="space-y-3">
         <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
-          Preset Demonstration Scenarios:
+          Try a scenario:
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {presetScenarios.map((s, idx) => (
@@ -213,19 +213,19 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         {/* Left: Agent Tool Call & Payload Editor (6 cols) */}
-        <div className="lg:col-span-6 space-y-4">
+        <div className="lg:col-span-6 min-w-0 space-y-4">
           <div className="glass-panel p-6 rounded-2xl space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center space-x-2">
                 <Cpu className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-                <span>Simulated AI Agent Execution Context</span>
+                <span>Test an action</span>
               </h3>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Agent ID</label>
-                <label htmlFor="sim-agent-id" className="sr-only">Agent ID</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Agent</label>
+                <label htmlFor="sim-agent-id" className="sr-only">Agent</label>
                 <select
                   id="sim-agent-id"
                   value={agentId}
@@ -240,8 +240,8 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Action / Tool Name</label>
-                <label htmlFor="sim-action-name" className="sr-only">Action / Tool Name</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Action</label>
+                <label htmlFor="sim-action-name" className="sr-only">Action</label>
                 <input
                   id="sim-action-name"
                   type="text"
@@ -254,8 +254,8 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Target Resource / Endpoint</label>
-              <label htmlFor="sim-target-resource" className="sr-only">Target Resource / Endpoint</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Target</label>
+              <label htmlFor="sim-target-resource" className="sr-only">Target</label>
               <input
                 id="sim-target-resource"
                 type="text"
@@ -267,8 +267,8 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Prompt / Input Instruction</label>
-              <label htmlFor="sim-prompt-input" className="sr-only">Prompt / Input Instruction</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Prompt or instruction</label>
+              <label htmlFor="sim-prompt-input" className="sr-only">Prompt or instruction</label>
               <input
                 id="sim-prompt-input"
                 type="text"
@@ -280,8 +280,8 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">JSON Payload Arguments</label>
-              <label htmlFor="sim-payload" className="sr-only">JSON Payload Arguments</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Action details (JSON)</label>
+              <label htmlFor="sim-payload" className="sr-only">Action details in JSON</label>
               <textarea
                 id="sim-payload"
                 rows={5}
@@ -298,21 +298,21 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
                 className="px-6 py-2.5 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white shadow-md shadow-brand-500/20 transition-all flex items-center space-x-2"
               >
                 <Send className="w-4 h-4" />
-                <span>{evaluating ? 'Evaluating via Gateway...' : 'Send Action to Gateway'}</span>
+                <span>{evaluating ? 'Checking…' : 'Check action'}</span>
               </button>
             </div>
           </div>
         </div>
 
         {/* Right: Live Gateway Interception & Policy Evaluation Decision (6 cols) */}
-        <div className="lg:col-span-6">
+        <div className="lg:col-span-6 min-w-0">
           <div className="glass-panel p-6 rounded-2xl space-y-6 h-full flex flex-col justify-between">
             
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
                 <div className="flex items-center space-x-2">
                   <Activity className="w-4 h-4 text-emerald-500 animate-pulse" />
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Gateway Interception Decision</h3>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Decision</h3>
                 </div>
               </div>
 
@@ -320,7 +320,7 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
                 <div className="space-y-5 animate-fade-in">
                   
                   {/* Decision Banner */}
-                  <div className={`p-5 rounded-2xl border flex items-center justify-between ${
+                  <div className={`p-5 rounded-2xl border flex flex-wrap items-center justify-between gap-4 ${
                     result.decision === 'ALLOW' ? 'bg-emerald-50 border-emerald-300 dark:bg-emerald-950/30 dark:border-emerald-500/40' :
                     result.decision === 'REVIEW' ? 'bg-amber-50 border-amber-300 dark:bg-amber-950/30 dark:border-amber-500/40' :
                     'bg-rose-50 border-rose-300 dark:bg-rose-950/30 dark:border-rose-500/40'
@@ -350,7 +350,7 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
                   {/* Reasons Breakdown */}
                   <div className="space-y-2">
                     <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
-                      Policy Evaluation Reasons:
+                      Why
                     </span>
                     <div className="space-y-2">
                       {result.reasons.map((r: string, i: number) => (
@@ -366,7 +366,7 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
                   <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
                     <span className="text-brand-700 dark:text-brand-300 font-bold block flex items-center space-x-1.5">
                       <ShieldAlert className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
-                      <span>Mitigation Enforcement:</span>
+                      <span>What happens next</span>
                     </span>
                     <p className="text-slate-700 dark:text-slate-300">{result.mitigation}</p>
                     <p className="text-[11px] text-emerald-700 dark:text-emerald-400 pt-1 font-semibold">
@@ -378,7 +378,7 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
                   {result.runbook_steps && result.runbook_steps.length > 0 && (
                     <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 space-y-2 text-xs">
                       <span className="text-rose-700 dark:text-rose-300 font-bold block">
-                        Auto-Generated Incident Runbook ({result.incident_severity}):
+                        Next steps ({result.incident_severity}):
                       </span>
                       <div className="space-y-1 text-[11px] text-slate-700 dark:text-slate-300">
                         {result.runbook_steps.map((st: string, idx: number) => (
@@ -392,16 +392,15 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
               ) : (
                 <div className="py-16 text-center text-slate-400 text-xs space-y-2">
                   <Activity className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-700" />
-                  <p>Click "Send Action to Gateway" or select a scenario above to test live interception.</p>
+                  <p>Check an action or choose a scenario above to see the decision.</p>
                 </div>
               )}
             </div>
 
             <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
-              <span>Telemetry sync active</span>
               <button
                 onClick={() => setActiveTab('dashboard')}
-                className="text-brand-600 dark:text-brand-400 hover:underline font-semibold flex items-center space-x-1"
+                className="ml-auto text-brand-600 dark:text-brand-400 hover:underline font-semibold flex items-center space-x-1"
               >
                 <span>View Dashboard</span>
                 <ArrowRight className="w-3.5 h-3.5" />
