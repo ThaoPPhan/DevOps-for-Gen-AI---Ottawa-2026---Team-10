@@ -11,24 +11,21 @@ import {
   SlidersHorizontal,
   Sun,
   Moon,
-  KeyRound,
   LogOut
 } from 'lucide-react';
+import { AuthSession } from '../types';
 
 interface NavbarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   isDark: boolean;
   setIsDark: (dark: boolean) => void;
-  adminAuthenticated: boolean;
-  adminConfigured: boolean;
-  adminKeyStatus: 'idle' | 'checking' | 'valid' | 'invalid';
-  onAdminKeyChange: (key: string) => void;
+  session: AuthSession;
+  onSignOut: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isDark, setIsDark, adminAuthenticated, adminConfigured, adminKeyStatus, onAdminKeyChange }) => {
-  const [showAdminAccess, setShowAdminAccess] = React.useState(false);
-  const [draftKey, setDraftKey] = React.useState('');
+export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isDark, setIsDark, session, onSignOut }) => {
+  const [showUserMenu, setShowUserMenu] = React.useState(false);
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Activity },
     { id: 'review', label: 'Risk Review', icon: Search },
@@ -84,17 +81,18 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isDark,
 
             <div className="hidden xl:block w-px h-5 bg-slate-200 dark:bg-slate-800 mx-1"></div>
 
-            {/* Theme Toggle */}
-            {adminConfigured && <button
-              type="button"
-              onClick={() => setShowAdminAccess(true)}
-              className={`h-9 px-2.5 rounded-lg border flex items-center gap-1.5 text-[11px] font-semibold transition-all ${adminAuthenticated ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/30 dark:text-emerald-300' : 'bg-slate-100 border-slate-200 text-slate-600 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'}`}
-              aria-label={adminAuthenticated ? 'Manage admin operator mode' : 'Enable admin operator mode'}
-              title={adminAuthenticated ? 'Admin operator mode active' : 'Enable temporary operator mode'}
-            >
-              <KeyRound className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{adminKeyStatus === 'checking' ? 'Checking…' : adminAuthenticated ? 'Admin' : 'Access'}</span>
-            </button>}
+            <div className="relative">
+              <button type="button" onClick={() => setShowUserMenu((visible) => !visible)} className="h-9 w-9 sm:h-auto sm:w-auto sm:max-w-[180px] rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 text-left text-[11px] font-semibold text-emerald-800 transition-all hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300" aria-expanded={showUserMenu} aria-label="Open account menu">
+                <span className="block text-center sm:hidden">{(session.user?.name || session.user?.email || 'S').slice(0, 1).toUpperCase()}</span>
+                <span className="hidden truncate sm:block">{session.user?.name || session.user?.email || 'Signed in'}</span>
+                <span className="hidden truncate text-[10px] font-normal opacity-75 sm:block">{session.organization?.name || 'Organization'} · {session.organization?.role || 'member'}</span>
+              </button>
+              {showUserMenu && <div className="absolute right-0 top-11 z-50 w-64 rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{session.user?.email}</p>
+                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{session.organization?.name}</p>
+                <button type="button" onClick={onSignOut} className="mt-3 flex w-full items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><LogOut className="h-3.5 w-3.5" />Sign out</button>
+              </div>}
+            </div>
             <button
               onClick={() => setIsDark(!isDark)}
               className="h-9 w-9 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300 transition-all shadow-sm shrink-0"
@@ -135,36 +133,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isDark,
         })}
       </div>
 
-      {showAdminAccess && (
-        <div className="fixed inset-0 z-[60] bg-slate-950/40 backdrop-blur-sm flex items-start justify-center p-4 pt-24" role="dialog" aria-modal="true" aria-labelledby="admin-access-title">
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl p-6 space-y-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 id="admin-access-title" className="font-bold text-slate-900 dark:text-white">Enable admin operator mode</h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">This is not a user login. The dashboard remains available read-only; operator mode is only for profile changes, validation, policy controls, and incident decisions. The key is kept only for this browser session.</p>
-              </div>
-              <button type="button" onClick={() => setShowAdminAccess(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white" aria-label="Close admin access dialog">×</button>
-            </div>
-            <label htmlFor="admin-api-key" className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">Operator session key</label>
-            <input
-              id="admin-api-key"
-              type="password"
-              value={draftKey}
-              onChange={(event) => setDraftKey(event.target.value)}
-              onKeyDown={(event) => { if (event.key === 'Enter') { onAdminKeyChange(draftKey); setDraftKey(''); setShowAdminAccess(false); } }}
-              placeholder="Paste the configured operator key"
-              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
-              autoFocus
-            />
-            <div className="flex justify-end gap-2">
-              {adminAuthenticated && <button type="button" onClick={() => { onAdminKeyChange(''); setDraftKey(''); setShowAdminAccess(false); }} className="px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-1.5"><LogOut className="w-3.5 h-3.5" />Sign out</button>}
-              <button type="button" onClick={() => { onAdminKeyChange(draftKey); setDraftKey(''); setShowAdminAccess(false); }} className="px-4 py-2 rounded-lg text-xs font-bold bg-brand-600 text-white hover:bg-brand-500">Enable operator mode</button>
-            </div>
-            {adminKeyStatus === 'invalid' && <p role="alert" className="text-xs text-rose-700 dark:text-rose-300">That key could not be verified. Check the Cloudflare secret and try again.</p>}
-            {adminKeyStatus === 'valid' && <p className="text-xs text-emerald-700 dark:text-emerald-300">Admin key verified for this browser session.</p>}
-          </div>
-        </div>
-      )}
     </header>
   );
 };

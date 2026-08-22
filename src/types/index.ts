@@ -92,3 +92,11 @@ export interface DashboardStats {
     action_status: string;
   }[];
 }
+
+export interface AuthSession {
+  authenticated: boolean;
+  provider: string;
+  login_url: string;
+  user: { id: string; email: string; name: string } | null;
+  organization: { id: string; name: string; role: 'owner' | 'admin' | 'operator' | 'viewer' } | null;
+}

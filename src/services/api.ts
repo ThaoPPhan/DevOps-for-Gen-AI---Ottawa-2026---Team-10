@@ -1,28 +1,6 @@
-import { Agent, Policy, SafetyEvent, Incident, DashboardStats } from '../types';
+import { Agent, Policy, SafetyEvent, Incident, DashboardStats, AuthSession } from '../types';
 
 const API_BASE = '/api';
-const ADMIN_KEY_STORAGE = 'agenticscale_admin_key';
-
-export function getAdminKey(): string {
-  try {
-    return sessionStorage.getItem(ADMIN_KEY_STORAGE) || '';
-  } catch {
-    return '';
-  }
-}
-
-export function setAdminKey(key: string): void {
-  try {
-    if (key.trim()) sessionStorage.setItem(ADMIN_KEY_STORAGE, key.trim());
-    else sessionStorage.removeItem(ADMIN_KEY_STORAGE);
-  } catch {
-    // Session storage may be unavailable in hardened browser contexts.
-  }
-}
-
-export function clearAdminKey(): void {
-  setAdminKey('');
-}
 
 export interface ValidationHistoryRecord {
   id: string;
@@ -61,7 +39,6 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
     headers: {
       Accept: 'application/json',
       ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(getAdminKey() ? { 'X-AgenticScale-Key': getAdminKey() } : {}),
       ...(init?.headers || {})
     }
   });
@@ -78,8 +55,8 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
     const serverMessage = payload && typeof payload === 'object' && 'error' in payload
       ? String((payload as { error: unknown }).error)
       : `Request failed with status ${response.status}.`;
-    const message = response.status === 401 && /admin|policy|profile|validation|incident|release/i.test(serverMessage)
-      ? 'Admin actions are not enabled for this deployment yet, or the operator key could not be verified. The owner must configure ADMIN_API_KEY in Cloudflare.'
+    const message = response.status === 401 && /AUTH_REQUIRED|signed-in|organization login/i.test(serverMessage)
+      ? 'Sign in through your organization login to continue.'
       : serverMessage;
     throw new Error(message);
   }
@@ -88,7 +65,8 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  getHealth: () => requestJson<{ status: string; database: { status: string }; capabilities?: { admin_auth_configured?: boolean; gateway_auth_configured?: boolean } }>('/health'),
+  getSession: () => requestJson<AuthSession>('/auth/session'),
+  getHealth: () => requestJson<{ status: string; database: { status: string }; capabilities?: { admin_auth_configured?: boolean; gateway_auth_configured?: boolean; organization_auth_configured?: boolean; provider?: string } }>('/health'),
 
   reviewAgent: (description: string, agentName?: string, owner?: string) => requestJson('/review', {
     method: 'POST',

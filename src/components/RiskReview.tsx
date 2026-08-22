@@ -355,7 +355,7 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
                   <FileText className="w-4 h-4 text-brand-600 dark:text-brand-400" />
                   <span>Synthesized Safety Profile</span>
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Structured governance specification ready for registration. New profiles enter Monitoring until validation and human release approval are complete.</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">This is a proposed governance profile. Saving it adds the agent to your fleet in Monitoring; it does not enable live execution.</p>
               </div>
 
               <div className="flex items-center space-x-2">
@@ -376,13 +376,18 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
                 <button
                   onClick={handleSaveProfile}
                   disabled={savingProfile}
+                  title="Save this profile to the agent fleet in Monitoring status"
                   className="px-4 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm flex items-center space-x-1.5 transition-all"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>{savingProfile ? 'Registering...' : 'Register Profile in Fleet'}</span>
+                  <span>{savingProfile ? 'Saving to fleet...' : 'Save to fleet as Monitoring'}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
+            </div>
+
+            <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3.5 py-3 text-[11px] text-emerald-900 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200">
+              <span className="font-bold">What happens next:</span> AgenticScale saves this profile in Agent Inventory, starts it in Monitoring, and takes you to Profiles. Run validation and approve release before treating it as protected for live actions.
             </div>
 
             {showRawJson ? (
