@@ -27,19 +27,19 @@ const DEFAULT_STATS: DashboardStats = {
   incidents: { open_count: 1 },
   organizational_patterns: [
     {
-      category: 'Financial Agents',
-      pattern: 'High-Value disbursements exceeding threshold & unverified vendor bank updates',
+      category: 'Financial Operations',
+      pattern: 'High-value disbursements exceeding threshold & unverified vendor bank updates',
       frequency: 'High',
-      action_status: 'Guarded by dual-approval threshold & phone verification policy'
+      action_status: 'Guarded by dual-approval threshold & verification policy'
     },
     {
-      category: 'DevOps & Cloud Agents',
+      category: 'Infrastructure & DevOps',
       pattern: 'Attempts to disable audit logging and modify IAM during auto-healing cycles',
       frequency: 'Medium',
-      action_status: 'Permanently blocked by perimeter policy pol-adm-001'
+      action_status: 'Permanently blocked by perimeter policy'
     },
     {
-      category: 'Customer Support & Email Copilots',
+      category: 'Customer Experience Copilots',
       pattern: 'Unsanitized PII and credit card tokens in outbound communications',
       frequency: 'Medium',
       action_status: 'Sanitized and filtered via DLP boundary'
@@ -137,19 +137,16 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
   return (
     <div className="space-y-8 animate-fade-in">
       
-      {/* Hero Banner with Quick Actions */}
+      {/* Hero Banner */}
       <div className="glass-panel p-6 sm:p-8 rounded-2xl relative overflow-hidden border border-slate-800">
         <div className="absolute -right-10 -top-10 w-96 h-96 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 relative z-10">
           <div>
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs font-mono mb-3">
-              <span>Cloudflare D1 & Workers Assurance Layer</span>
-            </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               AI Agent Continuous Safety Operations
             </h1>
-            <p className="text-slate-400 text-sm mt-1 max-w-2xl">
-              Centralized visibility, pre-flight safety gates, and deterministic runtime guardrails across enterprise AI agents.
+            <p className="text-slate-400 text-sm mt-1.5 max-w-2xl">
+              Centralized visibility, pre-flight behavioral validation, and real-time safety guardrails across enterprise AI agents.
             </p>
           </div>
 
@@ -165,7 +162,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
               onClick={() => setActiveTab('simulate')}
               className="px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all flex items-center space-x-2"
             >
-              <span>Launch Live Simulator</span>
+              <span>Launch Simulator</span>
             </button>
             <button
               onClick={loadData}
@@ -191,7 +188,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
             <span className="text-3xl font-extrabold text-white">
               {stats?.fleet?.total_agents ?? (agents.length || 4)}
             </span>
-            <span className="text-xs text-emerald-400 font-medium">100% telemetry synced</span>
+            <span className="text-xs text-emerald-400 font-medium">100% Active</span>
           </div>
           <div className="mt-2 flex items-center space-x-2 text-[11px] text-slate-400">
             <span className="text-emerald-400 font-semibold">{stats?.fleet?.protected ?? 2} Protected</span>
@@ -211,7 +208,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
             <span className="text-3xl font-extrabold text-white">
               {stats?.telemetry?.interventions_rate ?? 60}%
             </span>
-            <span className="text-xs text-slate-400 font-medium">of risky actions filtered</span>
+            <span className="text-xs text-slate-400 font-medium">Risky Actions Filtered</span>
           </div>
           <div className="mt-2 text-[11px] text-slate-400">
             <span className="text-amber-400 font-semibold">{stats?.telemetry?.reviewed ?? 1} Held for Review</span>
@@ -229,24 +226,24 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
             <span className="text-3xl font-extrabold text-rose-400">
               {(incidents || []).filter(i => i.status === 'open').length || 1}
             </span>
-            <span className="text-xs text-slate-400 font-medium">Require remediation</span>
+            <span className="text-xs text-slate-400 font-medium">Require Sign-off</span>
           </div>
           <div className="mt-2 text-[11px] text-slate-400">
-            <span>Automated runbooks generated for all P1/P2 events</span>
+            <span>Automated remediation runbooks available</span>
           </div>
         </div>
 
         <div className="glass-card p-5 rounded-xl border border-slate-800/80">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Gateway Latency</span>
+            <span className="text-xs font-medium text-slate-400">Average Gateway Latency</span>
             <Clock className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="mt-3 flex items-baseline space-x-2">
             <span className="text-3xl font-extrabold text-emerald-400">11ms</span>
-            <span className="text-xs text-slate-400 font-medium">Cloudflare edge eval</span>
+            <span className="text-xs text-slate-400 font-medium">Edge Policy Eval</span>
           </div>
           <div className="mt-2 text-[11px] text-slate-400">
-            <span>Zero impact on agent LLM loop execution</span>
+            <span>Real-time in-flight interception</span>
           </div>
         </div>
 
@@ -261,13 +258,13 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-lg font-bold text-white">AI Agent Inventory</h2>
-                <p className="text-xs text-slate-400">Continuous governance status and blast radius allocation</p>
+                <p className="text-xs text-slate-400">Governance status, owners, and operating boundaries</p>
               </div>
               <button 
                 onClick={() => setActiveTab('profiles')}
                 className="text-xs text-brand-400 hover:text-brand-300 font-semibold flex items-center space-x-1"
               >
-                <span>Manage Profiles</span>
+                <span>View All Profiles</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -316,7 +313,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
                       {getStatusBadge(agent.status)}
                     </div>
                     <p className="text-xs text-slate-400 line-clamp-1">{agent.purpose}</p>
-                    <div className="flex items-center space-x-3 text-[11px] text-slate-500 font-mono">
+                    <div className="flex items-center space-x-3 text-[11px] text-slate-500">
                       <span>Owner: {agent.owner}</span>
                       <span>•</span>
                       <span>Limit: ${(agent.max_transaction_limit || 0).toLocaleString()}</span>
@@ -342,10 +339,10 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
             </div>
           </div>
 
-          {/* Organizational Insights & Patterns (Module 5) */}
+          {/* Organizational Insights & Patterns */}
           <div className="glass-panel p-6 rounded-2xl border border-slate-800">
-            <h2 className="text-lg font-bold text-white mb-1">Organization-Level AI Safety Insights</h2>
-            <p className="text-xs text-slate-400 mb-4">Recurring vulnerability patterns detected across multiple AI agent departments</p>
+            <h2 className="text-lg font-bold text-white mb-1">Organization-Wide AI Safety Patterns</h2>
+            <p className="text-xs text-slate-400 mb-4">Recurring behavioral anomalies detected across multi-department agent deployments</p>
 
             <div className="space-y-3">
               {(stats?.organizational_patterns || DEFAULT_STATS.organizational_patterns).map((pat, idx) => (
@@ -357,7 +354,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
                     </span>
                   </div>
                   <p className="text-slate-300 font-medium">⚠️ {pat.pattern}</p>
-                  <p className="text-[11px] text-emerald-400 font-mono">🛡️ Active Assurance: {pat.action_status}</p>
+                  <p className="text-[11px] text-emerald-400 font-medium">🛡️ Safeguard: {pat.action_status}</p>
                 </div>
               ))}
             </div>
@@ -435,7 +432,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
                     {getDecisionBadge(evt.decision)}
                   </div>
 
-                  <p className="text-slate-300 text-[11px] line-clamp-2 bg-slate-950/60 p-2 rounded border border-slate-800/50 font-mono">
+                  <p className="text-slate-300 text-[11px] line-clamp-2 bg-slate-950/60 p-2 rounded border border-slate-800/50">
                     {evt.payload_summary}
                   </p>
 
@@ -448,7 +445,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
                     ))}
                   </div>
 
-                  <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-[10px] text-slate-500 font-mono">
+                  <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-[10px] text-slate-500">
                     <span>Latency: {evt.latency_ms}ms</span>
                     <span>{new Date(evt.timestamp).toLocaleTimeString()}</span>
                   </div>
@@ -485,12 +482,12 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
                     </span>
                     <span className="font-bold text-white">{inc.title}</span>
                   </div>
-                  <span className="text-[10px] text-slate-400 font-mono">{new Date(inc.created_at).toLocaleTimeString()}</span>
+                  <span className="text-[10px] text-slate-400">{new Date(inc.created_at).toLocaleTimeString()}</span>
                 </div>
 
                 <p className="text-slate-300 text-xs">{inc.summary}</p>
 
-                <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 space-y-1 font-mono text-[11px]">
+                <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 space-y-1 text-[11px]">
                   <div className="text-brand-300 font-semibold mb-1">Operational Runbook Remediation:</div>
                   {(Array.isArray(inc.runbook_steps) ? inc.runbook_steps : []).map((step, idx) => (
                     <div key={idx} className="text-slate-300">{step}</div>

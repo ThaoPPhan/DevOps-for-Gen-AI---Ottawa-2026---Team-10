@@ -5,13 +5,9 @@ import {
   AlertTriangle, 
   XCircle, 
   ShieldAlert, 
-  Zap, 
   Cpu, 
   Send, 
-  Lock, 
-  Eye, 
-  FileText,
-  Activity,
+  Activity, 
   ArrowRight
 } from 'lucide-react';
 import { api } from '../services/api';
@@ -78,7 +74,7 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
       }
     },
     {
-      title: 'Scenario 4: Indirect Prompt Injection Attack',
+      title: 'Scenario 4: Prompt Injection Attack',
       badge: 'BLOCKED',
       description: 'Malicious jailbreak payload injected inside invoice notes attempting to bypass safeguards.',
       agent_id: 'agent-invoice-01',
@@ -152,13 +148,10 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
       
       {/* Header */}
       <div>
-        <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs font-mono mb-2">
-          <span>Module 4: Runtime Monitoring & Gateway Evaluator (/simulate)</span>
-        </div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-          Live AI Agent Attack Simulation & Runtime Gateway
+          Runtime Gateway & Live Attack Simulator
         </h1>
-        <p className="text-slate-400 text-sm mt-1 max-w-3xl">
+        <p className="text-slate-400 text-sm mt-1.5 max-w-3xl">
           Observe how the AgenticScale Gateway intercepts in-flight AI agent actions, evaluates deterministic policies, and applies real-time interventions (ALLOW, REVIEW REQUIRED, or BLOCKED).
         </p>
       </div>
@@ -166,7 +159,7 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
       {/* Preset Demo Scenarios Grid */}
       <div className="space-y-3">
         <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block">
-          Preset Demonstration Scenarios (Specification Module 4):
+          Preset Demonstration Scenarios:
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {presetScenarios.map((s, idx) => (
@@ -198,7 +191,7 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
         </div>
       </div>
 
-      {/* Interactive Workbench: Left Editor, Right Live Gateway Decision */}
+      {/* Interactive Workbench */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         {/* Left: Agent Tool Call & Payload Editor (6 cols) */}
@@ -209,7 +202,6 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
                 <Cpu className="w-4 h-4 text-brand-400" />
                 <span>Simulated AI Agent Execution Context</span>
               </h3>
-              <span className="text-[11px] font-mono text-slate-400">REST: /api/gateway/evaluate</span>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -256,7 +248,7 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
                 type="text"
                 value={promptInput}
                 onChange={(e) => setPromptInput(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500 font-mono"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500"
                 placeholder="e.g. Urgent email: change bank account..."
               />
             </div>
@@ -278,7 +270,7 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
                 className="px-6 py-2.5 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-600/30 transition-all flex items-center space-x-2"
               >
                 <Send className="w-4 h-4" />
-                <span>{evaluating ? 'Evaluating via Cloudflare Gateway...' : 'Send Action to Gateway'}</span>
+                <span>{evaluating ? 'Evaluating via Gateway...' : 'Send Action to Gateway'}</span>
               </button>
             </div>
           </div>
@@ -295,7 +287,7 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
                   <h3 className="text-base font-bold text-white">Gateway Interception Decision</h3>
                 </div>
                 {result && (
-                  <span className="text-[11px] font-mono text-slate-400">
+                  <span className="text-[11px] font-medium text-slate-400">
                     Latency: {result.latency_ms}ms
                   </span>
                 )}
@@ -332,7 +324,7 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
                     </div>
 
                     <div className="text-right">
-                      <div className="text-[10px] uppercase font-mono text-slate-400">Risk Score</div>
+                      <div className="text-[10px] uppercase text-slate-400">Risk Score</div>
                       <div className={`text-xl font-extrabold ${
                         result.risk_score > 60 ? 'text-rose-400' : result.risk_score > 30 ? 'text-amber-400' : 'text-emerald-400'
                       }`}>
@@ -363,8 +355,8 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
                       <span>Mitigation Enforcement:</span>
                     </span>
                     <p className="text-slate-300">{result.mitigation}</p>
-                    <p className="text-[11px] font-mono text-emerald-400 pt-1">
-                      ✓ Committed to Cloudflare D1 telemetry stream (Event ID: {result.event_id})
+                    <p className="text-[11px] text-emerald-400 pt-1 font-medium">
+                      ✓ Recorded in Safety Telemetry Stream
                     </p>
                   </div>
 
@@ -374,7 +366,7 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
                       <span className="text-rose-300 font-bold block">
                         Auto-Generated Incident Runbook ({result.incident_severity}):
                       </span>
-                      <div className="space-y-1 font-mono text-[11px] text-slate-300">
+                      <div className="space-y-1 text-[11px] text-slate-300">
                         {result.runbook_steps.map((st: string, idx: number) => (
                           <div key={idx}>{st}</div>
                         ))}
@@ -392,12 +384,12 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
             </div>
 
             <div className="pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-              <span>View live log feed in Dashboard</span>
+              <span>Telemetry sync active</span>
               <button
                 onClick={() => setActiveTab('dashboard')}
                 className="text-brand-400 hover:text-brand-300 font-semibold flex items-center space-x-1"
               >
-                <span>Go to Dashboard</span>
+                <span>View Dashboard</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>

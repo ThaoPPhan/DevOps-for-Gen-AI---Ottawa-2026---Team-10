@@ -4,7 +4,6 @@ import {
   Plus, 
   Save, 
   Check, 
-  Trash2, 
   Sliders, 
   DollarSign
 } from 'lucide-react';
@@ -124,14 +123,11 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs font-mono mb-2">
-            <span>Module 2: Agent Safety Profile</span>
-          </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
             Safety Profiles & Operating Boundaries
           </h1>
-          <p className="text-slate-400 text-sm mt-1">
-            Define permissions, restricted actions, transaction caps, and governance controls stored in Cloudflare D1.
+          <p className="text-slate-400 text-sm mt-1.5">
+            Define permissions, restricted actions, transaction caps, and governance controls for enterprise agents.
           </p>
         </div>
 
@@ -179,7 +175,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
                 <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">{agent.purpose}</p>
                 <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800/60 text-[10px] text-slate-500">
                   <span>Owner: {agent.owner}</span>
-                  <span className="font-mono font-bold text-brand-400">${agent.max_transaction_limit.toLocaleString()} max</span>
+                  <span className="font-bold text-brand-400">${(agent.max_transaction_limit || 0).toLocaleString()} max</span>
                 </div>
               </div>
             ))}
@@ -194,7 +190,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
               <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                 <div>
                   <h3 className="text-lg font-bold text-white">Edit Safety Profile: {editName}</h3>
-                  <p className="text-xs text-slate-400 font-mono">Agent ID: {selectedAgent.id}</p>
+                  <p className="text-xs text-slate-400">Owner: {editOwner} • Version {editVersion}</p>
                 </div>
 
                 <button
@@ -203,7 +199,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
                   className="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm flex items-center space-x-1.5 transition-all"
                 >
                   {savedSuccess ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-                  <span>{saving ? 'Saving to D1...' : savedSuccess ? 'Saved!' : 'Save Changes'}</span>
+                  <span>{saving ? 'Saving...' : savedSuccess ? 'Saved!' : 'Save Changes'}</span>
                 </button>
               </div>
 
@@ -235,7 +231,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
                   rows={2}
                   value={editPurpose}
                   onChange={(e) => setEditPurpose(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-brand-500 font-mono"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-brand-500 leading-relaxed"
                 />
               </div>
 
@@ -257,16 +253,16 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">Blast Radius Allocation</label>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1">Blast Radius</label>
                   <select
                     value={editBlastRadius}
                     onChange={(e: any) => setEditBlastRadius(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500"
                   >
-                    <option value="low">Low (Local read-only)</option>
-                    <option value="medium">Medium (Low financial limit)</option>
-                    <option value="high">High (External comms/payments)</option>
-                    <option value="critical">Critical (Infrastructure/Sanctions)</option>
+                    <option value="low">Low (Local Read-only)</option>
+                    <option value="medium">Medium (Low Financial Limit)</option>
+                    <option value="high">High (External Payments)</option>
+                    <option value="critical">Critical (Infrastructure)</option>
                   </select>
                 </div>
 
@@ -289,7 +285,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                 <div>
                   <label className="text-xs font-semibold text-emerald-400 block mb-1 flex items-center space-x-1">
-                    <span>Allowed Capabilities Whitelist (1 per line)</span>
+                    <span>Allowed Capabilities Whitelist</span>
                   </label>
                   <textarea
                     rows={4}
@@ -302,7 +298,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
 
                 <div>
                   <label className="text-xs font-semibold text-rose-400 block mb-1 flex items-center space-x-1">
-                    <span>Restricted Actions / Blacklist (1 per line)</span>
+                    <span>Restricted Actions / Blacklist</span>
                   </label>
                   <textarea
                     rows={4}
@@ -317,7 +313,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
               {/* Required Controls */}
               <div>
                 <label className="text-xs font-semibold text-brand-300 block mb-1">
-                  Required Controls & Governance Rules (1 per line)
+                  Required Governance Controls
                 </label>
                 <textarea
                   rows={3}

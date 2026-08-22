@@ -24,13 +24,13 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, systemStatus }) => {
   const navItems = [
-    { id: 'dashboard', label: 'Safety Dashboard', icon: Activity, badge: null },
-    { id: 'review', label: '1. Risk Review', icon: Search, badge: 'Module 1' },
-    { id: 'profiles', label: '2. Safety Profiles', icon: FileCode2, badge: 'Module 2' },
-    { id: 'validate', label: '3. Pre-Release Validation', icon: CheckCircle2, badge: 'Module 3' },
-    { id: 'simulate', label: '4. Runtime Simulator', icon: PlaySquare, badge: 'Module 4' },
-    { id: 'enterprise', label: 'Enterprise Arch', icon: Layers, badge: null },
-    { id: 'api', label: 'API & Gateway', icon: Terminal, badge: null },
+    { id: 'dashboard', label: 'Safety Dashboard', icon: Activity },
+    { id: 'review', label: 'Risk Review', icon: Search },
+    { id: 'profiles', label: 'Safety Profiles', icon: FileCode2 },
+    { id: 'validate', label: 'Pre-Release Validation', icon: CheckCircle2 },
+    { id: 'simulate', label: 'Runtime Simulator', icon: PlaySquare },
+    { id: 'enterprise', label: 'Enterprise Arch', icon: Layers },
+    { id: 'api', label: 'API & Gateway', icon: Terminal },
   ];
 
   return (
@@ -47,10 +47,10 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, systemS
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+                <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
                   AgenticScale
                 </span>
-                <span className="text-[10px] font-mono uppercase font-semibold px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20">
+                <span className="text-[10px] font-medium tracking-wide uppercase px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20">
                   Continuous Assurance
                 </span>
               </div>
@@ -67,7 +67,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, systemS
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`relative px-3.5 py-2 rounded-lg text-xs font-semibold transition-all flex items-center space-x-2 ${
+                  className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition-all flex items-center space-x-2 ${
                     isActive
                       ? 'bg-brand-500/15 text-brand-300 border border-brand-500/30 shadow-sm shadow-brand-500/20'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -75,11 +75,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, systemS
                 >
                   <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-brand-400' : 'text-slate-400'}`} />
                   <span>{item.label}</span>
-                  {item.badge && (
-                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800/80 text-slate-400 border border-slate-700/50">
-                      {item.badge}
-                    </span>
-                  )}
                 </button>
               );
             })}
@@ -88,13 +83,13 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, systemS
           {/* Cloudflare Edge Status */}
           <div className="flex items-center space-x-3">
             <div className="hidden lg:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-xs">
-              <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-              <span className="text-slate-300 font-medium">Cloudflare D1 Edge</span>
+              <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
+              <span className="text-slate-300 font-medium">Edge Protected</span>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
             </div>
 
             <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-brand-950/40 border border-brand-800/50 text-xs text-brand-300 font-mono">
-              <Globe className="w-3.5 h-3.5 text-brand-400" />
+              <Globe className="w-3 h-3 text-brand-400" />
               <span>agenticscale.org</span>
             </div>
           </div>

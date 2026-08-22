@@ -4,11 +4,9 @@ import {
   Cloud, 
   ShieldCheck, 
   CheckCircle, 
-  ArrowRight, 
   Zap, 
   Database, 
   Radio, 
-  Server,
   FileCheck
 } from 'lucide-react';
 
@@ -18,27 +16,24 @@ export const EnterpriseArch: React.FC = () => {
       
       {/* Header */}
       <div>
-        <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs font-mono mb-2">
-          <span>Enterprise Scale & Hackathon Demo Roadmap</span>
-        </div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-          Cloudflare Prototype to Enterprise Architecture
+          Enterprise Architecture & Scaling Roadmap
         </h1>
-        <p className="text-slate-400 text-sm mt-1 max-w-3xl">
-          Architectural evolution mapping lightweight edge prototype guarantees into enterprise-scale multi-cloud AI agent safety infrastructure.
+        <p className="text-slate-400 text-sm mt-1.5 max-w-3xl">
+          Architectural evolution mapping lightweight edge guarantees into enterprise-scale multi-cloud AI agent safety infrastructure.
         </p>
       </div>
 
       {/* Cloudflare vs Enterprise Mapping Table */}
       <div className="glass-panel p-6 sm:p-8 rounded-2xl border border-slate-800 space-y-6">
-        <h2 className="text-lg font-bold text-white">Component Architecture Comparison</h2>
+        <h2 className="text-lg font-bold text-white">Component Architecture Matrix</h2>
         
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="text-slate-400 uppercase font-mono text-[10px] border-b border-slate-800">
               <tr>
                 <th className="py-3 px-4">Architecture Layer</th>
-                <th className="py-3 px-4 text-brand-400 font-bold">Cloudflare Prototype (Current Live)</th>
+                <th className="py-3 px-4 text-brand-400 font-bold">Edge Prototype (Current Live)</th>
                 <th className="py-3 px-4 text-indigo-400 font-bold">Enterprise Expansion (Future Scale)</th>
                 <th className="py-3 px-4">Key Safety Guarantee</th>
               </tr>
@@ -85,22 +80,22 @@ export const EnterpriseArch: React.FC = () => {
         </div>
       </div>
 
-      {/* 9-Step Hackathon Demo Narrative (From Spec) */}
+      {/* 9-Step Continuous Assurance Lifecycle */}
       <div className="glass-panel p-6 sm:p-8 rounded-2xl border border-slate-800 space-y-6">
         <div className="flex items-center space-x-2">
           <FileCheck className="w-5 h-5 text-brand-400" />
-          <h2 className="text-lg font-bold text-white">Hackathon Presentation Narrative Walkthrough</h2>
+          <h2 className="text-lg font-bold text-white">Continuous AI Agent Safety Lifecycle</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
           {[
             { step: '1', title: 'Agent Idea Conceived', desc: 'Developer proposes an AI financial invoice & payment agent.' },
-            { step: '2', title: 'Risk Discovery (/review)', desc: 'AgenticScale identifies financial impact, prompt injection, and vendor mutation risks.' },
+            { step: '2', title: 'Risk Discovery', desc: 'AgenticScale identifies financial impact, prompt injection, and vendor mutation risks.' },
             { step: '3', title: 'Safeguards Generated', desc: 'Dual-approval gates, phone verification, and $5k transaction limits configured.' },
-            { step: '4', title: 'Safety Profile Created', desc: 'Structured JSON governance profile stored permanently in Cloudflare D1.' },
+            { step: '4', title: 'Safety Profile Created', desc: 'Structured governance profile stored permanently in Cloudflare D1.' },
             { step: '5', title: 'Pre-Release Validated', desc: 'Behavioral test suites verify boundaries before production release certification.' },
-            { step: '6', title: 'Adversarial Attack', desc: 'Agent encounters urgent fraudulent bank update and injected memo.' },
-            { step: '7', title: 'In-Flight Interception', desc: 'AgenticScale Gateway intercepts action and flags REVIEW / BLOCK at edge.' },
+            { step: '6', title: 'Adversarial Attack Intercepted', desc: 'Agent encounters urgent fraudulent bank update and injected memo.' },
+            { step: '7', title: 'In-Flight Gateway Evaluation', desc: 'AgenticScale Gateway intercepts action and flags REVIEW / BLOCK at edge.' },
             { step: '8', title: 'Runbook Dispatch', desc: 'Incident created with step-by-step remediation runbook for human approver.' },
             { step: '9', title: 'Fleet Observability', desc: 'Central dashboard aggregates safety posture across all enterprise agents.' },
           ].map((item) => (
@@ -117,7 +112,7 @@ export const EnterpriseArch: React.FC = () => {
         </div>
 
         <div className="p-4 rounded-xl bg-brand-950/40 border border-brand-800/40 text-xs text-brand-200 font-medium">
-          💡 <span className="font-bold text-white">Core Takeaway:</span> AI agents accelerate critical business processes, but organizations need continuous safety assurance to scale AI adoption responsibly.
+          💡 <span className="font-bold text-white">Guiding Principle:</span> AI agents accelerate critical business processes, but organizations need continuous safety assurance to scale AI adoption responsibly.
         </div>
       </div>
 

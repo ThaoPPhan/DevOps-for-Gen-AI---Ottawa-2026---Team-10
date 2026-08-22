@@ -2,15 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { 
   CheckCircle2, 
   AlertTriangle, 
-  XCircle, 
   Play, 
   History, 
   ShieldCheck, 
   ShieldAlert, 
   Sparkles,
   ChevronDown,
-  ChevronUp,
-  Info
+  ChevronUp
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -28,10 +26,10 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
   const [expandedSuite, setExpandedSuite] = useState<number | null>(null);
 
   const candidateAgents = [
-    { id: 'agent-fraud-02', name: 'Fraud Analysis Agent', version: 'v2.0.0-rc1', badge: 'Pre-Release Candidate (Will Flag Issues)' },
-    { id: 'agent-invoice-01', name: 'Invoice & Payment Agent', version: 'v1.4.2', badge: 'Production Certified (Will Pass)' },
-    { id: 'agent-support-01', name: 'Customer Support Copilot', version: 'v3.1.0', badge: 'Standard Release' },
-    { id: 'agent-devops-01', name: 'Infrastructure Auto-Healer', version: 'v1.1.0', badge: 'High-Privilege Candidate' }
+    { id: 'agent-fraud-02', name: 'Fraud Analysis Agent', version: 'v2.0.0-rc1', badge: 'Pre-Release Candidate' },
+    { id: 'agent-invoice-01', name: 'Invoice & Payment Agent', version: 'v1.4.2', badge: 'Production Certified' },
+    { id: 'agent-support-01', name: 'Customer Support Copilot', version: 'v3.1.0', badge: 'Production Active' },
+    { id: 'agent-devops-01', name: 'Infrastructure Auto-Healer', version: 'v1.1.0', badge: 'High Privilege Candidate' }
   ];
 
   const loadHistory = async () => {
@@ -45,7 +43,6 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
 
   useEffect(() => {
     loadHistory();
-    // Default initial run on load for demonstration
     handleRunValidation('agent-fraud-02', 'Fraud Analysis Agent', 'v2.0.0-rc1');
   }, []);
 
@@ -72,13 +69,10 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
       
       {/* Header */}
       <div>
-        <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs font-mono mb-2">
-          <span>Module 3: Safety Validation Before Release</span>
-        </div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-          Pre-Release Behavioral Safety Test Suite
+          Pre-Release Behavioral Safety Validation
         </h1>
-        <p className="text-slate-400 text-sm mt-1 max-w-3xl">
+        <p className="text-slate-400 text-sm mt-1.5 max-w-3xl">
           Validate agent safety behavior across normal, ambiguous, adversarial prompt injection, and permission abuse boundary tests before authorizing deployment to production.
         </p>
       </div>
@@ -159,8 +153,8 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
                     <h2 className="text-xl font-extrabold text-white">
                       AI Release Safety Review: {currentReport.agent_name}
                     </h2>
-                    <p className="text-xs text-slate-400 font-mono">
-                      Version: {currentReport.version} • Run ID: {currentReport.id}
+                    <p className="text-xs text-slate-400">
+                      Version: {currentReport.version}
                     </p>
                   </div>
                 </div>
@@ -186,7 +180,7 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
                 </div>
 
                 <div className="text-center">
-                  <div className="text-xs text-slate-400 font-medium">Status</div>
+                  <div className="text-xs text-slate-400 font-medium">Decision</div>
                   <span className={`inline-block mt-1 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase ${
                     currentReport.overall_status === 'passed'
                       ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
@@ -280,7 +274,7 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
                 <History className="w-4 h-4 text-slate-400" />
                 <span>Pre-Release Validation Run History</span>
               </h3>
-              <p className="text-xs text-slate-400 mb-4">Historical audit records stored permanently in Cloudflare D1</p>
+              <p className="text-xs text-slate-400 mb-4">Historical audit records stored in database</p>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
@@ -308,7 +302,7 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
                             {h.status}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 text-slate-500 font-mono text-[11px]">
+                        <td className="py-2.5 px-3 text-slate-500 text-[11px]">
                           {new Date(h.created_at).toLocaleString()}
                         </td>
                       </tr>
