@@ -7,8 +7,7 @@ import { ReleaseValidation } from './components/ReleaseValidation';
 import { RuntimeSimulation } from './components/RuntimeSimulation';
 import { EnterpriseArch } from './components/EnterpriseArch';
 import { ApiDocs } from './components/ApiDocs';
-import { api } from './services/api';
-import { ShieldCheck, GitBranch, Globe, AlertTriangle, RefreshCw } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -66,7 +65,6 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 export function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [isDark, setIsDark] = useState<boolean>(() => {
-    // Default to Light Mode unless explicitly stored as dark
     const stored = localStorage.getItem('agenticscale_theme');
     return stored === 'dark';
   });
@@ -104,41 +102,17 @@ export function App() {
           {activeTab === 'api' && <ApiDocs />}
         </main>
 
-        {/* Footer */}
-        <footer className="border-t border-slate-200 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 py-6 mt-12 text-xs text-slate-500 transition-colors">
+        {/* Minimal Clean Footer */}
+        <footer className="border-t border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-950 py-6 mt-12 text-xs text-slate-500 transition-colors">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-            
             <div className="flex items-center space-x-2">
               <ShieldCheck className="w-4 h-4 text-brand-600 dark:text-brand-400" />
               <span className="font-bold text-slate-800 dark:text-slate-300">AgenticScale</span>
-              <span>— Continuous Safety Assurance Platform for AI Agents</span>
+              <span>— AI Agent Safety Operations</span>
             </div>
-
-            <div className="flex items-center space-x-6">
-              <span className="flex items-center space-x-1.5 font-medium text-[11px] text-emerald-600 dark:text-emerald-400">
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span>Active Safety Layer</span>
-              </span>
-              <a 
-                href="https://github.com/kelvin-ling/AgenticScale" 
-                target="_blank" 
-                rel="noreferrer"
-                className="hover:text-slate-800 dark:hover:text-slate-300 transition-colors flex items-center space-x-1"
-              >
-                <GitBranch className="w-3.5 h-3.5" />
-                <span>GitHub</span>
-              </a>
-              <a 
-                href="https://agenticscale.org" 
-                target="_blank" 
-                rel="noreferrer"
-                className="hover:text-slate-800 dark:hover:text-slate-300 transition-colors flex items-center space-x-1 text-brand-600 dark:text-brand-400"
-              >
-                <Globe className="w-3.5 h-3.5" />
-                <span>agenticscale.org</span>
-              </a>
+            <div className="text-slate-400 text-[11px]">
+              &copy; {new Date().getFullYear()} AgenticScale. All rights reserved.
             </div>
-
           </div>
         </footer>
 
