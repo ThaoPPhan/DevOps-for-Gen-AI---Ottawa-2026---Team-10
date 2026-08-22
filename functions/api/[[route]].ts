@@ -14,6 +14,7 @@ export interface Env {
   APP_VERSION?: string;
   AUTH_REQUIRED?: string;
   AUTH_DOMAIN?: string;
+  AUTH_TEAM_DOMAIN?: string;
   AUTH_PROVIDER?: string;
 }
 
@@ -363,10 +364,26 @@ app.get('/api/auth/session', async (c) => {
   return c.json({
     authenticated: Boolean(auth),
     provider: c.env.AUTH_PROVIDER || 'development',
-    login_url: `${loginOrigin}/cdn-cgi/access/login?returnTo=${encodeURIComponent(loginOrigin)}`,
+    login_url: `${loginOrigin}/api/auth/login?returnTo=%2F`,
     user: auth ? { id: auth.userId, email: auth.email, name: auth.name } : null,
     organization: auth ? { id: auth.organizationId, name: auth.organizationName, role: auth.role } : null
   });
+});
+
+app.get('/api/auth/login', async (c) => {
+  const auth = c.get('auth') as AuthContext | null;
+  const returnTo = c.req.query('returnTo') || '/';
+  const safeReturnTo = returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/';
+  if (!auth && !isLocalRequest(c.req.raw)) return c.json({ error: 'Sign-in is handled by the organization identity service.', code: 'AUTH_REQUIRED' }, 401);
+  return c.redirect(safeReturnTo, 302);
+});
+
+app.get('/api/auth/logout', async (c) => {
+  const requestOrigin = new URL(c.req.url).origin;
+  const returnTo = encodeURIComponent(`${requestOrigin}/`);
+  if (isLocalRequest(c.req.raw)) return c.redirect('/', 302);
+  const teamOrigin = `https://${c.env.AUTH_TEAM_DOMAIN || 'noobquestions.cloudflareaccess.com'}`;
+  return c.redirect(`${teamOrigin}/cdn-cgi/access/logout?redirect_url=${returnTo}`, 302);
 });
 
 app.post('/api/auth/admin', async (c) => {

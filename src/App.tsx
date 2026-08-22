@@ -186,11 +186,11 @@ export function App() {
   };
 
   const signIn = () => {
-    window.location.href = session?.login_url || '/cdn-cgi/access/login?returnTo=https%3A%2F%2Fagenticscale.org';
+    window.location.href = session?.login_url || '/api/auth/login?returnTo=%2F';
   };
 
   const signOut = () => {
-    window.location.href = '/cdn-cgi/access/logout';
+    window.location.href = '/api/auth/logout';
   };
 
   if (sessionLoading) {
