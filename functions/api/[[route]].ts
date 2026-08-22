@@ -375,17 +375,14 @@ app.get('/api/auth/session', async (c) => {
 });
 
 app.get('/api/auth/login', async (c) => {
-  const auth = c.get('auth') as AuthContext | null;
   const returnTo = c.req.query('returnTo') || '/';
   const safeReturnTo = returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/';
-  if ((!auth || auth.source === 'demo') && !isLocalRequest(c.req.raw)) {
-    // An interrupted Access flow can leave a browser with a partial app session.
-    // Clear it before sending the browser back through the protected path so the
-    // user sees the provider login page instead of an implementation error.
-    c.header('Cache-Control', 'no-store');
-    c.header('Set-Cookie', 'CF_AppSession=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax');
-    return c.redirect(`/api/auth/login?returnTo=${encodeURIComponent(safeReturnTo)}`, 302);
-  }
+  // Cloudflare Access protects this route and owns the challenge. Once Access
+  // has completed, the request reaches this handler and we only return the
+  // browser to the requested page. Never redirect back into this route: doing
+  // so creates a loop when a visitor has a stale/expired Access cookie or is
+  // authenticated by Access but is not yet provisioned in our membership table.
+  c.header('Cache-Control', 'no-store');
   return c.redirect(safeReturnTo, 302);
 });
 
@@ -393,7 +390,7 @@ app.get('/api/auth/logout', async (c) => {
   const requestOrigin = new URL(c.req.url).origin;
   const returnTo = encodeURIComponent(`${requestOrigin}/`);
   if (isLocalRequest(c.req.raw)) return c.redirect('/', 302);
-  const teamOrigin = `https://${c.env.AUTH_TEAM_DOMAIN || 'noobquestions.cloudflareaccess.com'}`;
+  const teamOrigin = `https://${c.env.AUTH_TEAM_DOMAIN || 'agenticscale.cloudflareaccess.com'}`;
   return c.redirect(`${teamOrigin}/cdn-cgi/access/logout?redirect_url=${returnTo}`, 302);
 });
 
