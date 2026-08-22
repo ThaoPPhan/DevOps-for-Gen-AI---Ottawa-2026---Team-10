@@ -10,7 +10,7 @@ import {
   Terminal,
   SlidersHorizontal,
   Sun,
-  Moon,
+  MoonStar,
   LogIn,
   LogOut,
   ChevronDown,
@@ -161,11 +161,11 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isDark,
             <button
               type="button"
               onClick={() => setIsDark(!isDark)}
-              className="h-9 w-9 shrink-0 rounded-lg border border-slate-200 bg-slate-100 text-slate-700 shadow-sm transition-all hover:bg-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-slate-700 shadow-sm transition-all hover:bg-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
               title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               aria-label="Toggle Theme"
             >
-              {isDark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-slate-700" />}
+              {isDark ? <Sun className="h-4 w-4 text-amber-400" /> : <MoonStar className="h-4 w-4 text-slate-700" />}
             </button>
           </div>
         </div>
