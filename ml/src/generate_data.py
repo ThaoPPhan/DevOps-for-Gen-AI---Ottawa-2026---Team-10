@@ -72,10 +72,19 @@ def generate_transactions(config: SplitConfig, seed: int = RANDOM_SEED) -> pd.Da
     is_new_merchant = (rng.random(n) < 0.12).astype(int)
 
     if config.split == "live":
-        # Shift live traffic toward high-value legitimate-like transactions
-        # to expose V2 false-positive regression in canary phase.
-        hv_idx = rng.random(n) < 0.20
-        amount[hv_idx] = np.round(np.clip(rng.lognormal(mean=7.2, sigma=0.40, size=hv_idx.sum()), 400, 6000), 2)
+        # Shift live traffic toward high-value legitimate-like transactions to
+        # expose V2's false-positive regression in canary phase. Every risk
+        # signal is suppressed (not just amount) so these are genuinely
+        # low-fraud-probability transactions under the true generating
+        # process -- the V2 misclassification comes from training bias
+        # (see train.py), not from these transactions being truly ambiguous.
+        # Concentration ramps from ~5% to ~45% across the stream so a
+        # rolling-window monitor sees the false-positive rate climb over
+        # time, rather than staying flat -- mirrors gradual canary drift.
+        hv_probability = np.linspace(0.05, 0.75, n)
+        hv_idx = rng.random(n) < hv_probability
+        n_hv = hv_idx.sum()
+        amount[hv_idx] = np.round(np.clip(rng.lognormal(mean=7.2, sigma=0.40, size=n_hv), 400, 6000), 2)
         card_present[hv_idx] = 1
         is_new_merchant[hv_idx] = 0
         previous_declines_24h[hv_idx] = 0
@@ -83,6 +92,12 @@ def generate_transactions(config: SplitConfig, seed: int = RANDOM_SEED) -> pd.Da
         account_age_days[hv_idx] = np.maximum(account_age_days[hv_idx], 900)
         country[hv_idx] = HOME_COUNTRY
         is_international[hv_idx] = 0
+        hour[hv_idx] = rng.integers(9, 21, size=n_hv)
+        distance_from_home_km[hv_idx] = np.clip(rng.gamma(shape=1.5, scale=15.0, size=n_hv), 0, 100)
+        transactions_last_hour[hv_idx] = np.clip(rng.poisson(lam=1.0, size=n_hv), 0, 3)
+        transactions_last_24h[hv_idx] = np.clip(
+            transactions_last_hour[hv_idx] + rng.poisson(lam=4.0, size=n_hv), 0, 10
+        )
         amount_vs_customer_average[hv_idx] = np.clip(amount[hv_idx] / np.maximum(avg_transaction_amount_30d[hv_idx], 1.0), 1.2, 6.0)
 
     # Base fraud logit from multi-signal interaction (no single perfect predictor)
@@ -94,10 +109,13 @@ def generate_transactions(config: SplitConfig, seed: int = RANDOM_SEED) -> pd.Da
         default=0.0,
     )
 
-    logit = (
-        -4.8
-        + 0.50 * np.log1p(amount)
-        + 0.95 * (amount_vs_customer_average > 4.0).astype(int)
+    # Raw transaction amount contributes a modest, unscaled amount so that a
+    # single high-value transaction alone never drives fraud probability --
+    # it only matters combined with other risk indicators below.
+    amount_term = 0.50 * np.log1p(amount)
+
+    risk_indicators = (
+        0.95 * (amount_vs_customer_average > 4.0).astype(int)
         + 0.55 * (device_age_days < 14).astype(int)
         + 0.60 * is_international
         + 0.35 * night
@@ -117,10 +135,19 @@ def generate_transactions(config: SplitConfig, seed: int = RANDOM_SEED) -> pd.Da
         * (is_international == 1).astype(int)
         * (1 - card_present)
     )
-    logit += 0.8 * interaction
+    risk_indicators += 0.8 * interaction
+
+    # INDICATOR_SCALE amplifies the combined risk-indicator signal (but not
+    # raw amount) so that transactions with several co-occurring risk factors
+    # are clearly separable from routine transactions -- needed to hit
+    # realistic precision/recall at ~5% fraud prevalence. No single feature
+    # is scaled on its own, so fraud still requires a combination of signals
+    # rather than one perfect predictor.
+    INDICATOR_SCALE = 12.0
+    logit = -26.8 + amount_term + INDICATOR_SCALE * risk_indicators
 
     # Controlled randomness/noise so task remains realistic
-    logit += rng.normal(0, 0.30, size=n)
+    logit += rng.normal(0, 0.15, size=n)
 
     fraud_prob = _sigmoid(logit)
     fraud = (rng.random(n) < fraud_prob).astype(int)

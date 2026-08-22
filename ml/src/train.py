@@ -6,21 +6,27 @@ import json
 from datetime import UTC, datetime
 
 import joblib
+import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 
 from ml.config import (
     ARTIFACT_DIR,
     FEATURE_COLUMNS,
+    FEATURE_SCHEMA_VERSION,
     METRICS_PATHS,
     MODEL_PATHS,
+    MODEL_THRESHOLD,
     RANDOM_SEED,
     TARGET_COLUMN,
 )
+from ml.src import model_registry
 from ml.src.evaluate import evaluate_model
+
+MODEL_TYPE = "HistGradientBoostingClassifier"
 
 
 def _build_pipeline(random_seed: int) -> Pipeline:
@@ -34,13 +40,16 @@ def _build_pipeline(random_seed: int) -> Pipeline:
         ]
     )
 
-    clf = RandomForestClassifier(
-        n_estimators=250,
-        max_depth=12,
-        min_samples_leaf=2,
+    # HistGradientBoostingClassifier gives much better-calibrated
+    # probabilities than a class-weighted RandomForest at this ~4% fraud
+    # prevalence, which matters because we operate at a fixed threshold
+    # rather than re-tuning per model.
+    clf = HistGradientBoostingClassifier(
+        max_iter=400,
+        learning_rate=0.06,
+        max_depth=6,
+        l2_regularization=0.1,
         random_state=random_seed,
-        n_jobs=-1,
-        class_weight="balanced_subsample",
     )
 
     return Pipeline(steps=[("preprocess", preprocess), ("model", clf)])
@@ -63,13 +72,19 @@ def train_phase1_models() -> dict[str, dict]:
     v1.fit(X_train, y_train)
 
     # Controlled regression V2:
-    # introduce training bias where high-value legitimate txns are underrepresented,
-    # causing higher false positives for that segment in evaluation/live traffic.
-    high_value_legit = (train_df[TARGET_COLUMN] == 0) & (train_df["amount"] > 1200)
-    keep_mask = ~high_value_legit
-    keep_mask.loc[high_value_legit] = (
-        train_df.loc[high_value_legit, "amount_vs_customer_average"] < 3.0
-    ) | (train_df.loc[high_value_legit].index % 4 == 0)
+    # Legitimate high-value transactions (amount > $300, non-fraud) are
+    # heavily underrepresented in V2's training data -- only a small random
+    # slice is kept. V2 therefore never learns that a large amount can be
+    # normal for an established, in-person, domestic customer, and starts
+    # flagging that pattern as suspicious. This is a realistic mistake (e.g.
+    # a bad training-data sampling job) rather than a hand-flipped label,
+    # and it specifically targets the high-value-legitimate segment the live
+    # stream gradually shifts toward (see generate_data.py), so the false
+    # positive rate should climb visibly as canary traffic grows.
+    rng = np.random.default_rng(RANDOM_SEED + 7)
+    high_value_legit = (train_df[TARGET_COLUMN] == 0) & (train_df["amount"] > 300)
+    keep_roll = rng.random(len(train_df))
+    keep_mask = ~high_value_legit | (keep_roll < 0.003)
 
     biased_train = train_df[keep_mask].copy()
     X_train_v2 = biased_train[FEATURE_COLUMNS]
@@ -80,30 +95,57 @@ def train_phase1_models() -> dict[str, dict]:
 
     joblib.dump(v1, MODEL_PATHS["v1"])
     joblib.dump(v2, MODEL_PATHS["v2"])
+    model_registry.clear_cache()
 
-    metrics_v1 = evaluate_model(v1, X_eval, y_eval, threshold=0.50)
-    metrics_v2 = evaluate_model(v2, X_eval, y_eval, threshold=0.50)
+    raw_metrics_v1 = evaluate_model(v1, X_eval, y_eval, threshold=MODEL_THRESHOLD)
+    raw_metrics_v2 = evaluate_model(v2, X_eval, y_eval, threshold=MODEL_THRESHOLD)
 
-    metrics_v1.update(
-        {
-            "model_version": "v1",
-            "trained_at": datetime.now(UTC).isoformat(),
-            "train_rows": int(len(train_df)),
-        }
-    )
-    metrics_v2.update(
-        {
-            "model_version": "v2",
-            "trained_at": datetime.now(UTC).isoformat(),
-            "train_rows": int(len(biased_train)),
-        }
-    )
+    # Legacy flat metrics files, kept for evaluate.py's comparison report.
+    metrics_v1 = {
+        **raw_metrics_v1,
+        "model_version": "v1",
+        "trained_at": datetime.now(UTC).isoformat(),
+        "train_rows": int(len(train_df)),
+    }
+    metrics_v2 = {
+        **raw_metrics_v2,
+        "model_version": "v2",
+        "trained_at": datetime.now(UTC).isoformat(),
+        "train_rows": int(len(biased_train)),
+    }
 
     with open(METRICS_PATHS["v1"], "w", encoding="utf-8") as f:
         json.dump(metrics_v1, f, indent=2)
 
     with open(METRICS_PATHS["v2"], "w", encoding="utf-8") as f:
         json.dump(metrics_v2, f, indent=2)
+
+    # Full governance metadata (feature schema, threshold, artifact hash,
+    # git commit, dataset identifier) consumed by model_registry.py.
+    metadata_v1 = model_registry.build_metadata(
+        model_version="v1",
+        model_type=MODEL_TYPE,
+        feature_schema_version=FEATURE_SCHEMA_VERSION,
+        classification_threshold=MODEL_THRESHOLD,
+        feature_names=FEATURE_COLUMNS,
+        training_dataset="data/generated/train.csv",
+        training_rows=len(train_df),
+        random_seed=RANDOM_SEED,
+        metrics=raw_metrics_v1,
+    )
+    metadata_v2 = model_registry.build_metadata(
+        model_version="v2",
+        model_type=MODEL_TYPE,
+        feature_schema_version=FEATURE_SCHEMA_VERSION,
+        classification_threshold=MODEL_THRESHOLD,
+        feature_names=FEATURE_COLUMNS,
+        training_dataset="data/generated/train.csv",
+        training_rows=len(biased_train),
+        random_seed=RANDOM_SEED + 1,
+        metrics=raw_metrics_v2,
+    )
+    model_registry.save_metadata("v1", metadata_v1)
+    model_registry.save_metadata("v2", metadata_v2)
 
     return {"v1": metrics_v1, "v2": metrics_v2}
 

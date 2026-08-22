@@ -1,40 +1,40 @@
-"""Stable prediction interface for V1/V2."""
+"""Stable prediction interface for V1/V2.
+
+predict_transaction() is the one contract the backend team integrates
+against: same input dict shape, same output dict shape, for either model
+version. Model loading, caching, and threshold sourcing are delegated to
+model_registry.py so this file stays a thin, stable surface.
+"""
 
 from __future__ import annotations
 
 from time import perf_counter
 
-import joblib
 import pandas as pd
 
-from ml.config import FEATURE_COLUMNS, MODEL_PATHS, MODEL_THRESHOLD
+from ml.config import FEATURE_COLUMNS
+from ml.src import model_registry
+from ml.src.schemas import SchemaValidationError, validate_transaction
 
 
 class PredictionError(ValueError):
-    """Raised when prediction input is invalid."""
-
-
-def _load_model(model_version: str):
-    mv = model_version.lower()
-    if mv not in MODEL_PATHS:
-        raise PredictionError(f"Invalid model_version '{model_version}'. Expected one of {list(MODEL_PATHS.keys())}.")
-
-    model_path = MODEL_PATHS[mv]
-    if not model_path.exists():
-        raise PredictionError(f"Model artifact not found: {model_path}. Train models first.")
-
-    return joblib.load(model_path), mv
-
-
-def _validate_transaction(transaction: dict) -> None:
-    missing = [c for c in FEATURE_COLUMNS if c not in transaction]
-    if missing:
-        raise PredictionError(f"Missing required fields: {missing}")
+    """Raised when prediction input or model_version is invalid."""
 
 
 def predict_transaction(model_version: str, transaction: dict) -> dict:
-    _validate_transaction(transaction)
-    model, normalized_mv = _load_model(model_version)
+    try:
+        validate_transaction(transaction)
+    except SchemaValidationError as exc:
+        raise PredictionError(str(exc)) from exc
+
+    try:
+        model = model_registry.get_model(model_version)
+        metadata = model_registry.get_metadata(model_version)
+    except model_registry.ModelNotFoundError as exc:
+        raise PredictionError(str(exc)) from exc
+
+    normalized_mv = metadata["model_version"]
+    threshold = metadata["classification_threshold"]
 
     input_df = pd.DataFrame([transaction], columns=FEATURE_COLUMNS)
 
@@ -42,13 +42,13 @@ def predict_transaction(model_version: str, transaction: dict) -> dict:
     proba = float(model.predict_proba(input_df)[0, 1])
     latency_ms = (perf_counter() - start) * 1000.0
 
-    pred = int(proba >= MODEL_THRESHOLD)
+    pred = int(proba >= threshold)
 
     return {
         "model_version": normalized_mv,
         "fraud_probability": proba,
         "prediction": pred,
-        "threshold": MODEL_THRESHOLD,
+        "threshold": threshold,
         "latency_ms": latency_ms,
     }
 
