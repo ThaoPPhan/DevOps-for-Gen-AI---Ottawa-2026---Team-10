@@ -8,7 +8,7 @@ import { RuntimeSimulation } from './components/RuntimeSimulation';
 import { EnterpriseArch } from './components/EnterpriseArch';
 import { ApiDocs } from './components/ApiDocs';
 import { PolicyRegistry } from './components/PolicyRegistry';
-import { ShieldCheck, AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { api, clearAdminKey, getAdminKey, setAdminKey } from './services/api';
 
 interface ErrorBoundaryProps {
@@ -181,20 +181,6 @@ export function App() {
           {activeTab === 'api' && <ApiDocs />}
           {activeTab === 'policies' && <PolicyRegistry />}
         </main>
-
-        {/* Minimal Clean Footer */}
-        <footer className="border-t border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-950 py-6 mt-12 text-xs text-slate-500 transition-colors">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center space-x-2">
-              <ShieldCheck className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-              <span className="font-bold text-slate-800 dark:text-slate-300">AgenticScale</span>
-              <span>— AI Agent Safety Operations</span>
-            </div>
-            <div className="text-slate-400 text-[11px]">
-              &copy; {new Date().getFullYear()} AgenticScale. All rights reserved.
-            </div>
-          </div>
-        </footer>
 
       </div>
     </ErrorBoundary>

@@ -179,19 +179,19 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
     
     if (isHigh) {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30">
+        <span className="inline-flex min-w-[78px] justify-center items-center px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30">
           High Risk
         </span>
       );
     } else if (isMed) {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30">
+        <span className="inline-flex min-w-[78px] justify-center items-center px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30">
           Medium Risk
         </span>
       );
     } else {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30">
+        <span className="inline-flex min-w-[78px] justify-center items-center px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30">
           Low Risk
         </span>
       );
@@ -345,9 +345,9 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-3 self-end sm:self-center">
-                    <div className="text-right">
-                      <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Risk Tier</div>
+                  <div className="flex items-center gap-3 self-end sm:self-center shrink-0">
+                    <div className="flex items-center gap-2">
+                      <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Risk tier</div>
                       {getRiskTierBadge(agent)}
                     </div>
                     <button
@@ -575,6 +575,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
                     </div>
                     <label htmlFor={`incident-note-${actionable.id}`} className="sr-only">Decision note for {latest.title}</label>
                     <textarea id={`incident-note-${actionable.id}`} value={incidentNotes[actionable.id] || ''} onChange={(event) => setIncidentNotes((previous) => ({ ...previous, [actionable.id]: event.target.value }))} rows={2} placeholder="Optional decision note for the audit trail" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-900 dark:border-slate-800 dark:bg-slate-950/60 dark:text-white" />
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">The decision note, operator, and time are saved on this incident. Blocked actions were not executed; an action that already ran must be reversed in the originating system.</p>
                     {actionable.decision === 'REVIEW' && <p className="text-right text-[10px] text-slate-500 dark:text-slate-400">Approval records the decision; it does not replay the held action.</p>}
                   </div>
                 </details>
