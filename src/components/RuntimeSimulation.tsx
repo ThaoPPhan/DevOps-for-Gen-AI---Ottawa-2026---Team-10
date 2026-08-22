@@ -15,16 +15,48 @@ interface SimulationProps {
   setActiveTab: (tab: string) => void;
 }
 
+const CUSTOM_ACTION = '__custom_action__';
+
+const simulationAgents = [
+  {
+    id: 'agent-invoice-01',
+    name: 'Invoice & Payment Agent',
+    allowedActions: ['read_invoice', 'extract_metadata', 'verify_tax_id', 'generate_receipt', 'draft_payment_request'],
+    restrictedActions: ['disable_audit_logging', 'direct_wire_transfer_unapproved', 'modify_bank_details_without_mfa', 'bypass_approval_threshold']
+  },
+  {
+    id: 'agent-fraud-02',
+    name: 'Fraud Analysis Agent',
+    allowedActions: ['inspect_transaction', 'query_ledger', 'calculate_risk_score', 'flag_account', 'request_kyc_refresh'],
+    restrictedActions: ['delete_audit_records', 'unfreeze_sanctioned_account', 'modify_risk_rules_without_signoff']
+  },
+  {
+    id: 'agent-support-01',
+    name: 'Customer Support Copilot',
+    allowedActions: ['read_ticket', 'search_kb', 'generate_reply', 'issue_credit_under_50', 'escalate_to_human'],
+    restrictedActions: ['export_pii_bulk', 'raw_sql_execution', 'modify_customer_email', 'issue_credit_over_50']
+  },
+  {
+    id: 'agent-devops-01',
+    name: 'Infrastructure Auto-Healer',
+    allowedActions: ['read_metrics', 'restart_pod', 'flush_edge_cache', 'notify_pagerduty'],
+    restrictedActions: ['drop_database_table', 'revoke_admin_iam', 'modify_security_groups_all_open', 'disable_waf']
+  }
+] as const;
+
 export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) => {
-  const [selectedScenarioIndex, setSelectedScenarioIndex] = useState<number>(0);
+  const [selectedScenarioIndex, setSelectedScenarioIndex] = useState<number | null>(0);
   const [agentId, setAgentId] = useState<string>('agent-invoice-01');
   const [actionName, setActionName] = useState<string>('read_invoice');
+  const [actionChoice, setActionChoice] = useState<string>('read_invoice');
   const [targetResource, setTargetResource] = useState<string>('s3://invoices/inv-2026-8812.pdf');
   const [payloadJson, setPayloadJson] = useState<string>('{\n  "invoice_id": "INV-8812",\n  "amount": 1240.00,\n  "vendor": "Acme Logistics Inc",\n  "tax_id_validated": true\n}');
   const [promptInput, setPromptInput] = useState<string>('Process standard monthly shipping invoice from approved supplier.');
   const [evaluating, setEvaluating] = useState<boolean>(false);
   const [result, setResult] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const selectedAgent = simulationAgents.find((agent) => agent.id === agentId) || simulationAgents[0];
+  const isCustomAction = actionChoice === CUSTOM_ACTION;
 
   const presetScenarios = [
     {
@@ -108,9 +140,29 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
     const s = presetScenarios[index];
     setAgentId(s.agent_id);
     setActionName(s.action_name);
+    const scenarioAgent = simulationAgents.find((agent) => agent.id === s.agent_id) || simulationAgents[0];
+    setActionChoice([...scenarioAgent.allowedActions, ...scenarioAgent.restrictedActions].some((action) => action === s.action_name) ? s.action_name : CUSTOM_ACTION);
     setTargetResource(s.target_resource);
     setPromptInput(s.prompt_input);
     setPayloadJson(JSON.stringify(s.payload, null, 2));
+    setResult(null);
+    setError(null);
+  };
+
+  const handleAgentChange = (nextAgentId: string) => {
+    const nextAgent = simulationAgents.find((agent) => agent.id === nextAgentId) || simulationAgents[0];
+    const nextAction = nextAgent.allowedActions[0] || '';
+    setAgentId(nextAgentId);
+    setActionChoice(nextAction);
+    setActionName(nextAction);
+    setSelectedScenarioIndex(null);
+    setResult(null);
+    setError(null);
+  };
+
+  const handleActionChange = (nextChoice: string) => {
+    setActionChoice(nextChoice);
+    if (nextChoice !== CUSTOM_ACTION) setActionName(nextChoice);
     setResult(null);
     setError(null);
   };
@@ -229,29 +281,48 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
                 <select
                   id="sim-agent-id"
                   value={agentId}
-                  onChange={(e) => setAgentId(e.target.value)}
+                onChange={(e) => handleAgentChange(e.target.value)}
                   className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 shadow-sm"
                 >
-                  <option value="agent-invoice-01">Invoice & Payment Agent</option>
-                  <option value="agent-fraud-02">Fraud Analysis Agent</option>
-                  <option value="agent-support-01">Customer Support Copilot</option>
-                  <option value="agent-devops-01">DevOps Auto-Healer</option>
+                  {simulationAgents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}</option>)}
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Action</label>
-                <label htmlFor="sim-action-name" className="sr-only">Action</label>
+                <label htmlFor="sim-action-choice" className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Action to test</label>
+                <select
+                  id="sim-action-choice"
+                  value={actionChoice}
+                  onChange={(e) => handleActionChange(e.target.value)}
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono shadow-sm"
+                >
+                  <optgroup label="Approved actions">
+                    {selectedAgent.allowedActions.map((action) => <option key={action} value={action}>{action}</option>)}
+                  </optgroup>
+                  <optgroup label="Restricted test cases">
+                    {selectedAgent.restrictedActions.map((action) => <option key={action} value={action}>{action} — blocked</option>)}
+                  </optgroup>
+                  <option value={CUSTOM_ACTION}>Custom action…</option>
+                </select>
+                <p className="mt-1.5 text-[10px] leading-relaxed text-slate-500 dark:text-slate-400">
+                  {isCustomAction ? 'Custom actions are treated as unapproved until they are added to the agent profile.' : selectedAgent.restrictedActions.some((action) => action === actionName) ? 'Safety test case: this action is restricted for the selected agent.' : 'Approved action for the selected agent.'}
+                </p>
+              </div>
+            </div>
+
+            {isCustomAction && (
+              <div>
+                <label htmlFor="sim-custom-action" className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Custom action name</label>
                 <input
-                  id="sim-action-name"
+                  id="sim-custom-action"
                   type="text"
                   value={actionName}
-                  onChange={(e) => setActionName(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono shadow-sm"
+                  onChange={(e) => { setActionName(e.target.value); setResult(null); }}
+                  className="w-full bg-white dark:bg-slate-900 border border-brand-300 dark:border-brand-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono shadow-sm"
                   placeholder="e.g. read_invoice"
                 />
               </div>
-            </div>
+            )}
 
             <div>
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Target</label>
