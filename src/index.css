@@ -2,14 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: dark;
-}
-
 body {
   margin: 0;
-  background-color: #030712;
-  color: #f3f4f6;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
@@ -17,49 +11,45 @@ code, pre {
   font-family: 'JetBrains Mono', monospace;
 }
 
-/* Glassmorphism custom classes */
+/* Glassmorphism & Panel Classes for Light / Dark Mode */
 .glass-panel {
-  background: rgba(15, 23, 42, 0.75);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+}
+
+.dark .glass-panel {
+  background: rgba(15, 23, 42, 0.75);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: none;
 }
 
 .glass-card {
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+}
+
+.dark .glass-card {
   background: rgba(30, 41, 59, 0.5);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.glow-brand {
-  box-shadow: 0 0 35px -5px rgba(14, 142, 233, 0.25);
-}
-
-.glow-safety-allow {
-  box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.25);
-}
-
-.glow-safety-review {
-  box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.25);
-}
-
-.glow-safety-block {
-  box-shadow: 0 0 25px -5px rgba(239, 68, 68, 0.25);
+  box-shadow: none;
 }
 
 /* Custom scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #090d16;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #cbd5e1;
   border-radius: 4px;
 }
-::-webkit-scrollbar-thumb:hover {
+.dark ::-webkit-scrollbar-thumb {
   background: #334155;
 }

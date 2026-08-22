@@ -96,10 +96,10 @@ export async function evaluateAgentAction(params: {
       
       {/* Header */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
           AgenticScale Safety Gateway API
         </h1>
-        <p className="text-slate-400 text-sm mt-1.5 max-w-3xl">
+        <p className="text-slate-600 dark:text-slate-400 text-sm mt-1.5 max-w-3xl">
           Integrate continuous safety assurance into any AI agent framework (LangChain, LlamaIndex, CrewAI, AutoGen, or custom LLM loops).
         </p>
       </div>
@@ -108,61 +108,61 @@ export async function evaluateAgentAction(params: {
       <div className="space-y-6">
         
         {/* Python */}
-        <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-3">
+        <div className="glass-panel p-6 rounded-2xl space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-white flex items-center space-x-2">
-              <Code2 className="w-4 h-4 text-brand-400" />
+            <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+              <Code2 className="w-4 h-4 text-brand-600 dark:text-brand-400" />
               <span>Python Integration (LangChain / CrewAI / Raw Python)</span>
             </span>
             <button
               onClick={() => copyToClipboard(pythonSnippet, 'python')}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center space-x-1.5"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center space-x-1.5 shadow-sm"
             >
-              {copiedKey === 'python' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedKey === 'python' ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copiedKey === 'python' ? 'Copied' : 'Copy Python'}</span>
             </button>
           </div>
-          <pre className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 font-mono text-xs overflow-x-auto leading-relaxed">
+          <pre className="p-4 rounded-xl bg-slate-900 dark:bg-slate-950 text-slate-100 font-mono text-xs overflow-x-auto leading-relaxed border border-slate-800">
             {pythonSnippet}
           </pre>
         </div>
 
         {/* TypeScript */}
-        <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-3">
+        <div className="glass-panel p-6 rounded-2xl space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-white flex items-center space-x-2">
-              <Code2 className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+              <Code2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span>TypeScript / Node.js Integration</span>
             </span>
             <button
               onClick={() => copyToClipboard(tsSnippet, 'ts')}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center space-x-1.5"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center space-x-1.5 shadow-sm"
             >
-              {copiedKey === 'ts' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedKey === 'ts' ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copiedKey === 'ts' ? 'Copied' : 'Copy TypeScript'}</span>
             </button>
           </div>
-          <pre className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 font-mono text-xs overflow-x-auto leading-relaxed">
+          <pre className="p-4 rounded-xl bg-slate-900 dark:bg-slate-950 text-slate-100 font-mono text-xs overflow-x-auto leading-relaxed border border-slate-800">
             {tsSnippet}
           </pre>
         </div>
 
         {/* cURL */}
-        <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-3">
+        <div className="glass-panel p-6 rounded-2xl space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-white flex items-center space-x-2">
-              <Terminal className="w-4 h-4 text-amber-400" />
+            <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+              <Terminal className="w-4 h-4 text-amber-600 dark:text-amber-400" />
               <span>cURL Direct Gateway Evaluation</span>
             </span>
             <button
               onClick={() => copyToClipboard(curlSnippet, 'curl')}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center space-x-1.5"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center space-x-1.5 shadow-sm"
             >
-              {copiedKey === 'curl' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedKey === 'curl' ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copiedKey === 'curl' ? 'Copied' : 'Copy cURL'}</span>
             </button>
           </div>
-          <pre className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 font-mono text-xs overflow-x-auto leading-relaxed">
+          <pre className="p-4 rounded-xl bg-slate-900 dark:bg-slate-950 text-slate-100 font-mono text-xs overflow-x-auto leading-relaxed border border-slate-800">
             {curlSnippet}
           </pre>
         </div>

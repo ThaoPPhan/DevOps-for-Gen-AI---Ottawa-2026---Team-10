@@ -123,10 +123,10 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Safety Profiles & Operating Boundaries
           </h1>
-          <p className="text-slate-400 text-sm mt-1.5">
+          <p className="text-slate-600 dark:text-slate-400 text-sm mt-1.5">
             Define permissions, restricted actions, transaction caps, and governance controls for enterprise agents.
           </p>
         </div>
@@ -134,7 +134,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
         <div className="flex items-center space-x-3">
           <button
             onClick={handleCreateNew}
-            className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all flex items-center space-x-1.5"
+            className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-all flex items-center space-x-1.5"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>New Profile</span>
@@ -153,7 +153,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
         
         {/* Left: Agent Selection List (4 cols) */}
         <div className="lg:col-span-4 space-y-3">
-          <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Registered Agent Profiles</h2>
+          <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Registered Agent Profiles</h2>
           
           <div className="space-y-2">
             {agents.map((agent) => (
@@ -162,20 +162,20 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
                 onClick={() => selectAgentForEdit(agent)}
                 className={`p-3.5 rounded-xl cursor-pointer border transition-all text-xs ${
                   selectedAgent?.id === agent.id
-                    ? 'bg-brand-950/40 border-brand-500/40 shadow-sm shadow-brand-500/20'
-                    : 'bg-slate-900/70 border-slate-800 hover:border-slate-700 text-slate-400'
+                    ? 'bg-brand-50/80 border-brand-300 dark:bg-brand-950/40 dark:border-brand-500/40 shadow-sm'
+                    : 'bg-white hover:bg-slate-50 dark:bg-slate-900/70 border-slate-200 dark:border-slate-800 dark:hover:border-slate-700 text-slate-600 dark:text-slate-400 shadow-sm'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-white text-sm">{agent.name}</span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">
+                  <span className="font-bold text-slate-900 dark:text-white text-sm">{agent.name}</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                     {agent.version}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">{agent.purpose}</p>
-                <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800/60 text-[10px] text-slate-500">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">{agent.purpose}</p>
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/60 text-[10px] text-slate-500">
                   <span>Owner: {agent.owner}</span>
-                  <span className="font-bold text-brand-400">${(agent.max_transaction_limit || 0).toLocaleString()} max</span>
+                  <span className="font-bold text-brand-600 dark:text-brand-400">${(agent.max_transaction_limit || 0).toLocaleString()} max</span>
                 </div>
               </div>
             ))}
@@ -185,12 +185,12 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
         {/* Right: Active Profile Editor (8 cols) */}
         <div className="lg:col-span-8">
           {selectedAgent ? (
-            <div className="glass-panel p-6 sm:p-8 rounded-2xl border border-slate-800 space-y-6">
+            <div className="glass-panel p-6 sm:p-8 rounded-2xl space-y-6">
               
-              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
                 <div>
-                  <h3 className="text-lg font-bold text-white">Edit Safety Profile: {editName}</h3>
-                  <p className="text-xs text-slate-400">Owner: {editOwner} • Version {editVersion}</p>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Edit Safety Profile: {editName}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Owner: {editOwner} • Version {editVersion}</p>
                 </div>
 
                 <button
@@ -206,32 +206,32 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
               {/* Form Fields */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">Agent Name</label>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Agent Name</label>
                   <input
                     type="text"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 shadow-sm"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">Owning Team</label>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Owning Team</label>
                   <input
                     type="text"
                     value={editOwner}
                     onChange={(e) => setEditOwner(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 shadow-sm"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">Agent Purpose & Scope</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Agent Purpose & Scope</label>
                 <textarea
                   rows={2}
                   value={editPurpose}
                   onChange={(e) => setEditPurpose(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-brand-500 leading-relaxed"
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 leading-relaxed shadow-sm"
                 />
               </div>
 
@@ -239,11 +239,11 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
                 
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">Governance Status</label>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Governance Status</label>
                   <select
                     value={editStatus}
                     onChange={(e: any) => setEditStatus(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 shadow-sm"
                   >
                     <option value="protected">Protected (Guarded)</option>
                     <option value="monitoring">Monitoring Only</option>
@@ -253,11 +253,11 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">Risk Tier</label>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Risk Tier</label>
                   <select
                     value={editRiskTier}
                     onChange={(e) => setEditRiskTier(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 shadow-sm"
                   >
                     <option value="low">Low Risk</option>
                     <option value="medium">Medium Risk</option>
@@ -266,14 +266,14 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">Autonomous Limit ($USD)</label>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Autonomous Limit ($USD)</label>
                   <div className="relative">
-                    <DollarSign className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
+                    <DollarSign className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
                     <input
                       type="number"
                       value={editLimit}
                       onChange={(e) => setEditLimit(Number(e.target.value))}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-8 pr-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500 font-mono"
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl pl-8 pr-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono shadow-sm"
                     />
                   </div>
                 </div>
@@ -283,27 +283,27 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
               {/* Whitelist & Blacklist Boundaries */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                 <div>
-                  <label className="text-xs font-semibold text-emerald-400 block mb-1 flex items-center space-x-1">
+                  <label className="text-xs font-bold text-emerald-700 dark:text-emerald-400 block mb-1 flex items-center space-x-1">
                     <span>Allowed Capabilities Whitelist</span>
                   </label>
                   <textarea
                     rows={4}
                     value={allowedActionsText}
                     onChange={(e) => setAllowedActionsText(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white font-mono focus:outline-none focus:border-emerald-500 leading-relaxed"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-emerald-500 leading-relaxed shadow-sm"
                     placeholder="read_invoice&#10;extract_metadata"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-rose-400 block mb-1 flex items-center space-x-1">
+                  <label className="text-xs font-bold text-rose-700 dark:text-rose-400 block mb-1 flex items-center space-x-1">
                     <span>Restricted Actions / Blacklist</span>
                   </label>
                   <textarea
                     rows={4}
                     value={restrictedActionsText}
                     onChange={(e) => setRestrictedActionsText(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white font-mono focus:outline-none focus:border-rose-500 leading-relaxed"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-rose-500 leading-relaxed shadow-sm"
                     placeholder="disable_audit_logging&#10;delete_audit_records"
                   />
                 </div>
@@ -311,14 +311,14 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
 
               {/* Required Controls */}
               <div>
-                <label className="text-xs font-semibold text-brand-300 block mb-1">
+                <label className="text-xs font-bold text-brand-700 dark:text-brand-300 block mb-1">
                   Required Governance Controls
                 </label>
                 <textarea
                   rows={3}
                   value={controlsText}
                   onChange={(e) => setControlsText(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white font-mono focus:outline-none focus:border-brand-500"
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-brand-500 shadow-sm"
                   placeholder="human_approval_over_5k&#10;vendor_bank_change_dual_control"
                 />
               </div>
