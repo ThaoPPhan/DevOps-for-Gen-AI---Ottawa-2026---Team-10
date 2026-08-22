@@ -11,8 +11,7 @@ import {
   ChevronRight, 
   Filter, 
   Check,
-  ShieldCheck,
-  Clock
+  Radio
 } from 'lucide-react';
 import { Agent, SafetyEvent, Incident, DashboardStats } from '../types';
 import { api } from '../services/api';
@@ -63,7 +62,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
       const [statsData, agentsData, eventsData, incidentsData] = await Promise.all([
         api.getDashboardStats().catch(() => DEFAULT_STATS),
         api.getAgents().catch(() => []),
-        api.getEvents({ decision: filterDecision || undefined, limit: 15 }).catch(() => []),
+        api.getEvents({ decision: filterDecision || undefined, limit: 10 }).catch(() => []),
         api.getIncidents().catch(() => [])
       ]);
       if (statsData && statsData.fleet) setStats(statsData);
@@ -261,9 +260,9 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
       </div>
 
       {/* Main Content Grid: Fleet Inventory + Live Events */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {/* Left Column: Fleet Inventory (7 cols) */}
+        {/* Left Column: Fleet Inventory & Organizational Patterns (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
           <div className="glass-panel p-6 rounded-2xl">
             <div className="flex items-center justify-between mb-4">
@@ -371,13 +370,18 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
         </div>
 
         {/* Right Column: Live Safety Events Telemetry Feed (5 cols) */}
-        <div className="lg:col-span-5 space-y-6">
-          <div className="glass-panel p-6 rounded-2xl flex flex-col h-full">
-            <div className="flex items-center justify-between mb-4">
+        <div className="lg:col-span-5">
+          <div className="glass-panel p-6 rounded-2xl space-y-4">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800/80">
               <div>
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center space-x-2">
                   <span>Live Safety Events</span>
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1"></span>
+                    Live
+                  </span>
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Gateway audit feed & real-time interventions</p>
               </div>
@@ -398,9 +402,9 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
               </div>
             </div>
 
-            {/* Events List */}
-            <div className="space-y-3.5 overflow-y-auto max-h-[620px] pr-1">
-              {(events.length > 0 ? events : [
+            {/* Events Cards (No awkward internal clipping) */}
+            <div className="space-y-4 pt-1">
+              {(events.length > 0 ? events.slice(0, 4) : [
                 {
                   id: 'evt-1001',
                   agent_id: 'agent-invoice-01',
@@ -432,7 +436,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
               ]).map((evt) => (
                 <div
                   key={evt.id}
-                  className="p-4 rounded-xl bg-slate-50/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-3 hover:border-slate-300 dark:hover:border-slate-700 transition-all text-xs shadow-sm"
+                  className="p-4 rounded-xl bg-slate-50/90 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-3 hover:border-slate-300 dark:hover:border-slate-700 transition-all text-xs shadow-sm"
                 >
                   {/* Row 1: Agent Name & Timestamp */}
                   <div className="flex items-center justify-between gap-2">
@@ -479,6 +483,18 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
                 </div>
               ))}
             </div>
+
+            {/* Bottom link to Simulator */}
+            <div className="pt-2 text-center">
+              <button
+                onClick={() => setActiveTab('simulate')}
+                className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold inline-flex items-center space-x-1"
+              >
+                <span>Test Actions in Runtime Simulator</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
           </div>
         </div>
 
