@@ -9,14 +9,20 @@ import {
 export const ApiDocs: React.FC = () => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  const copyToClipboard = (text: string, key: string) => {
-    navigator.clipboard.writeText(text);
+  const copyToClipboard = async (text: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      setCopiedKey(null);
+      return;
+    }
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
   const pythonSnippet = `# AgenticScale Python AI Agent Safety Wrapper
 import requests
+import os
 
 def execute_safe_action(agent_id, action_name, target_resource, payload, prompt_input=""):
     """
@@ -24,7 +30,7 @@ def execute_safe_action(agent_id, action_name, target_resource, payload, prompt_
     Returns: 'ALLOW', 'REVIEW', or 'BLOCK'
     """
     url = "https://agenticscale.pages.dev/api/gateway/evaluate"
-    response = requests.post(url, json={
+    response = requests.post(url, headers={"X-AgenticScale-Key": os.environ["AGENTICSCALE_API_KEY"]}, json={
         "agent_id": agent_id,
         "action_name": action_name,
         "target_resource": target_resource,
@@ -33,6 +39,7 @@ def execute_safe_action(agent_id, action_name, target_resource, payload, prompt_
         "summary": f"{action_name} on {target_resource}"
     })
     
+    response.raise_for_status()
     result = response.json()
     decision = result.get("decision")
     
@@ -73,6 +80,9 @@ export async function evaluateAgentAction(params: {
   });
 
   const evaluation = await res.json();
+  if (!res.ok) {
+    throw new Error(\`AgenticScale request failed (\${res.status}): \${evaluation.error ?? 'Unknown error'}\`);
+  }
   if (evaluation.decision === 'BLOCK') {
     throw new Error(\`AgenticScale Blocked Action: \${evaluation.reasons.join(', ')}\`);
   }
@@ -104,6 +114,12 @@ export async function evaluateAgentAction(params: {
         <p className="text-slate-600 dark:text-slate-400 text-sm mt-1.5 max-w-3xl">
           Integrate continuous safety assurance into any AI agent framework (LangChain, LlamaIndex, CrewAI, AutoGen, or custom LLM loops).
         </p>
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200">
+          External gateway callers must send <code className="font-mono">X-AgenticScale-Key</code> using the configured <code className="font-mono">GATEWAY_API_KEY</code>. Admin profile, validation, and incident actions require <code className="font-mono">ADMIN_API_KEY</code>.
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+          Available endpoints: <code className="font-mono">POST /api/review</code>, <code className="font-mono">GET/POST /api/agents</code>, <code className="font-mono">POST /api/validate</code>, <code className="font-mono">POST /api/gateway/evaluate</code>, <code className="font-mono">GET /api/events</code>, and <code className="font-mono">GET /api/incidents</code>.
+        </div>
       </div>
 
       {/* Code Snippets */}

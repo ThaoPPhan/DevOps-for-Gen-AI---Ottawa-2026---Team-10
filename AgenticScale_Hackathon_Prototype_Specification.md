@@ -25,6 +25,18 @@ Instead:
 > risks visible, safeguards actionable, and behavior continuously
 > observable.
 
+## Current Implementation Boundary
+
+The deployed artifact is a deterministic Cloudflare Pages Functions prototype.
+It records governance evidence and evaluates simulated actions; it does not
+replace an enterprise identity provider, deploy AI agents, suspend real agent
+credentials, or claim production authorization. Profile mutations and human
+incident decisions require an administrator API key. External alert delivery is
+optional through a configured webhook, while the dashboard uses short-interval
+polling for telemetry. A passed validation run can be approved or rejected by an
+administrator; approval is recorded in D1 and promotes the profile to Protected,
+but deployment of the underlying agent remains an external human-controlled step.
+
 ------------------------------------------------------------------------
 
 # Initial Deployment Scope

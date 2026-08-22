@@ -21,7 +21,7 @@ interface DashboardProps {
 }
 
 const EMPTY_STATS: DashboardStats = {
-  fleet: { total_agents: 0, protected: 0, monitoring: 0, at_risk: 0 },
+  fleet: { total_agents: 0, protected: 0, monitoring: 0, at_risk: 0, quarantined: 0 },
   telemetry: { total_events: 0, allowed: 0, reviewed: 0, blocked: 0, interventions_rate: 0 },
   incidents: { open_count: 0 },
   organizational_patterns: []
@@ -36,6 +36,10 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [searchEvents, setSearchEvents] = useState<string>('');
+  const [filterAgentId, setFilterAgentId] = useState<string>('');
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -44,13 +48,14 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
       const [statsData, agentsData, eventsData, incidentsData] = await Promise.all([
         api.getDashboardStats(),
         api.getAgents(),
-        api.getEvents({ decision: filterDecision || undefined, limit: 10 }),
+        api.getEvents({ decision: filterDecision || undefined, agent_id: filterAgentId || undefined, limit: 100 }),
         api.getIncidents()
       ]);
       setStats(statsData);
       setAgents(agentsData);
       setEvents(eventsData);
       setIncidents(incidentsData);
+      setLastUpdated(new Date().toISOString());
     } catch (err) {
       console.error('Error loading dashboard data:', err);
       setError(err instanceof Error ? err.message : 'Dashboard data is unavailable.');
@@ -63,19 +68,27 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
     loadData();
     const interval = setInterval(loadData, 15000);
     return () => clearInterval(interval);
-  }, [filterDecision]);
+  }, [filterDecision, filterAgentId]);
 
-  const handleResolveIncident = async (id: string) => {
+  const handleIncidentAction = async (id: string, action: 'acknowledge' | 'approve' | 'reject' | 'resolve') => {
     setResolvingId(id);
+    setActionError(null);
     try {
-      await api.resolveIncident(id, 'resolved');
+      await api.incidentAction(id, action);
       await loadData();
     } catch (err) {
       console.error('Failed to resolve incident:', err);
+      setActionError(err instanceof Error ? err.message : 'Incident action failed.');
     } finally {
       setResolvingId(null);
     }
   };
+
+  const visibleEvents = events.filter((event) => {
+    const needle = searchEvents.trim().toLowerCase();
+    if (!needle) return true;
+    return `${event.agent_name || event.agent_id} ${event.action_name} ${event.payload_summary}`.toLowerCase().includes(needle);
+  });
 
   const getDecisionBadge = (decision: string) => {
     switch (decision) {
@@ -184,7 +197,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
       </div>
 
       {error && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-300">
+        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 dark:border-rose-950/20 dark:text-rose-300">
           Dashboard data could not be loaded: {error}. Use Refresh to retry.
         </div>
       )}
@@ -203,12 +216,14 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
             </span>
             <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">Active</span>
           </div>
-          <div className="mt-2 flex items-center space-x-2 text-[11px] text-slate-500 dark:text-slate-400">
+              <div className="mt-2 flex items-center space-x-2 text-[11px] text-slate-500 dark:text-slate-400">
             <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{stats.fleet.protected} Protected</span>
             <span>•</span>
             <span className="text-blue-600 dark:text-blue-400 font-semibold">{stats.fleet.monitoring} Monitoring</span>
             <span>•</span>
             <span className="text-amber-600 dark:text-amber-400 font-semibold">{stats.fleet.at_risk} At Risk</span>
+            <span>•</span>
+            <span className="text-rose-600 dark:text-rose-400 font-semibold">{stats.fleet.quarantined} Quarantined</span>
           </div>
         </div>
 
@@ -237,9 +252,9 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
           </div>
           <div className="mt-3 flex items-baseline space-x-2">
             <span className="text-3xl font-extrabold text-rose-600 dark:text-rose-400">
-              {incidents.filter(i => i.status === 'open').length}
+              {stats.incidents.open_count}
             </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Require Action</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Active</span>
           </div>
           <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
             <span>Remediation runbooks active</span>
@@ -269,7 +284,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
             </div>
 
             <div className="space-y-3 pt-1">
-              {agents.map((agent) => (
+              {loading && agents.length === 0 ? [1, 2, 3].map((item) => <div key={item} className="h-24 rounded-xl bg-slate-100 dark:bg-slate-900 animate-pulse" />) : agents.map((agent) => (
                 <div 
                   key={agent.id}
                   className="glass-card p-4 rounded-xl hover:border-brand-300 dark:hover:border-slate-700 transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
@@ -326,9 +341,17 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
               </div>
 
               {/* Filter */}
-              <div className="flex items-center space-x-1">
+              <div className="flex flex-wrap items-center justify-end gap-2">
                 <Filter className="w-3.5 h-3.5 text-slate-400" />
+                <label htmlFor="event-search" className="sr-only">Search events</label>
+                <input id="event-search" value={searchEvents} onChange={(event) => setSearchEvents(event.target.value)} placeholder="Search events" className="w-28 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs rounded-lg px-2 py-1 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-brand-500" />
+                <label htmlFor="event-agent-filter" className="sr-only">Filter by agent</label>
+                <select id="event-agent-filter" value={filterAgentId} onChange={(event) => setFilterAgentId(event.target.value)} className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs rounded-lg px-2 py-1 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-brand-500 shadow-sm">
+                  <option value="">All Agents</option>
+                  {agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}</option>)}
+                </select>
                 <select
+                  id="event-decision-filter"
                   value={filterDecision}
                   onChange={(e) => setFilterDecision(e.target.value)}
                   className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs rounded-lg px-2 py-1 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-brand-500 shadow-sm"
@@ -343,7 +366,7 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
 
             {/* Events Cards */}
             <div className="space-y-3.5 pt-1">
-              {events.slice(0, 3).map((evt) => (
+              {loading && events.length === 0 ? <div className="space-y-3">{[1, 2, 3].map((item) => <div key={item} className="h-28 rounded-xl bg-slate-100 dark:bg-slate-900 animate-pulse" />)}</div> : visibleEvents.slice(0, 5).map((evt) => (
                 <div
                   key={evt.id}
                   className="p-4 rounded-xl bg-slate-50/90 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-2.5 hover:border-slate-300 dark:hover:border-slate-700 transition-all text-xs shadow-sm"
@@ -392,10 +415,12 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
                   )}
                 </div>
               ))}
+              {!loading && visibleEvents.length === 0 && <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center text-xs text-slate-500">No events match the current filters.</div>}
             </div>
 
             {/* Bottom link to Simulator */}
-            <div className="pt-1 text-center">
+          <div className="pt-1 text-center space-y-1">
+            {lastUpdated && <p className="text-[10px] text-slate-400">Last refreshed {new Date(lastUpdated).toLocaleTimeString()}</p>}
               <button
                 onClick={() => setActiveTab('simulate')}
                 className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold inline-flex items-center space-x-1"
@@ -468,21 +493,28 @@ export const CentralDashboard: React.FC<DashboardProps> = ({ setActiveTab }) => 
                   ))}
                 </div>
 
-                <div className="flex items-center justify-end space-x-3 pt-2">
-                  <button
-                    onClick={() => handleResolveIncident(inc.id)}
+                <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
+                  {inc.status === 'open' && <button
+                    onClick={() => handleIncidentAction(inc.id, 'acknowledge')}
                     disabled={resolvingId === inc.id}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center space-x-1.5 transition-all shadow-sm"
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 flex items-center space-x-1.5 transition-all shadow-sm"
                   >
-                    <Check className="w-3.5 h-3.5" />
-                    <span>{resolvingId === inc.id ? 'Resolving...' : 'Acknowledge & Resolve'}</span>
-                  </button>
+                    <span>Acknowledge</span>
+                  </button>}
+                  {inc.decision === 'REVIEW' && <>
+                    <button onClick={() => handleIncidentAction(inc.id, 'reject')} disabled={resolvingId === inc.id} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white">Reject & Close</button>
+                    <button onClick={() => handleIncidentAction(inc.id, 'approve')} disabled={resolvingId === inc.id} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white">Approve & Close</button>
+                  </>}
+                  {inc.decision !== 'REVIEW' && <button onClick={() => handleIncidentAction(inc.id, 'resolve')} disabled={resolvingId === inc.id} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5"><Check className="w-3.5 h-3.5" />Resolve</button>}
                 </div>
+                {inc.decision === 'REVIEW' && <p className="text-[10px] text-slate-500 dark:text-slate-400 text-right">Approval records the decision; it does not replay the held action.</p>}
               </div>
             ))}
           </div>
         </div>
       )}
+
+      {actionError && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-300">{actionError}</div>}
 
     </div>
   );

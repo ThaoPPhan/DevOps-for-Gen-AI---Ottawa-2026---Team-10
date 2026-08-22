@@ -4,7 +4,9 @@ import {
   Plus, 
   Save, 
   Check, 
-  DollarSign
+  DollarSign,
+  Archive,
+  History
 } from 'lucide-react';
 import { Agent } from '../types';
 import { api } from '../services/api';
@@ -33,6 +35,21 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
   const [allowedActionsText, setAllowedActionsText] = useState<string>('');
   const [restrictedActionsText, setRestrictedActionsText] = useState<string>('');
   const [controlsText, setControlsText] = useState<string>('');
+  const [changeReason, setChangeReason] = useState<string>('');
+  const [profileHistory, setProfileHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState<boolean>(false);
+
+  const loadProfileHistory = async (agentId: string) => {
+    setHistoryLoading(true);
+    try {
+      setProfileHistory(await api.getProfileHistory(agentId));
+    } catch (err) {
+      console.error('Error fetching profile history:', err);
+      setProfileHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
   const loadAgents = async () => {
     setLoading(true);
@@ -40,8 +57,14 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
     try {
       const data = await api.getAgents();
       setAgents(data);
-      if (data.length > 0 && !selectedAgent) {
-        selectAgentForEdit(data[0]);
+      const refreshedSelection = selectedAgent ? data.find((agent) => agent.id === selectedAgent.id) : data[0];
+      if (refreshedSelection) {
+        setSelectedAgent(refreshedSelection);
+        if (!selectedAgent) {
+          selectAgentForEdit(refreshedSelection);
+        } else {
+          void loadProfileHistory(refreshedSelection.id);
+        }
       }
     } catch (err) {
       console.error('Error fetching agents:', err);
@@ -68,6 +91,8 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
     setAllowedActionsText(agent.allowed_actions.join('\n'));
     setRestrictedActionsText(agent.restricted_actions.join('\n'));
     setControlsText(agent.required_controls.join('\n'));
+    setChangeReason('');
+    void loadProfileHistory(agent.id);
   };
 
   const handleCreateNew = () => {
@@ -106,7 +131,10 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
         max_transaction_limit: editLimit,
         allowed_actions: allowedActionsText.split('\n').map(s => s.trim()).filter(Boolean),
         restricted_actions: restrictedActionsText.split('\n').map(s => s.trim()).filter(Boolean),
-        required_controls: controlsText.split('\n').map(s => s.trim()).filter(Boolean)
+        required_controls: controlsText.split('\n').map(s => s.trim()).filter(Boolean),
+        risk_categories: selectedAgent.risk_categories || [],
+        monitoring_requirements: selectedAgent.monitoring_requirements || [],
+        change_reason: changeReason || 'Profile updated through governance console.'
       };
 
       await api.saveAgent(payload);
@@ -116,6 +144,22 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
     } catch (err) {
       console.error('Error saving agent profile:', err);
       setError(err instanceof Error ? err.message : 'Unable to save the profile.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleArchive = async () => {
+    if (!selectedAgent || !agents.some((agent) => agent.id === selectedAgent.id)) return;
+    if (!window.confirm(`Archive ${selectedAgent.name}? It will leave the active fleet but remain in history.`)) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await api.archiveAgent(selectedAgent.id);
+      setSelectedAgent(null);
+      await loadAgents();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to archive the profile.');
     } finally {
       setSaving(false);
     }
@@ -135,7 +179,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
           </p>
         </div>
 
-        <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-3">
           <button
             onClick={handleCreateNew}
             className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-all flex items-center space-x-1.5"
@@ -153,7 +197,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
       </div>
 
       {error && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-300">
+        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-300">
           {error}
         </div>
       )}
@@ -172,10 +216,11 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
               </p>
             )}
             {agents.map((agent) => (
-              <div
+              <button
+                type="button"
                 key={agent.id}
                 onClick={() => selectAgentForEdit(agent)}
-                className={`p-3.5 rounded-xl cursor-pointer border transition-all text-xs ${
+                className={`w-full text-left p-3.5 rounded-xl cursor-pointer border transition-all text-xs ${
                   selectedAgent?.id === agent.id
                     ? 'bg-brand-50/80 border-brand-300 dark:bg-brand-950/40 dark:border-brand-500/40 shadow-sm'
                     : 'bg-white hover:bg-slate-50 dark:bg-slate-900/70 border-slate-200 dark:border-slate-800 dark:hover:border-slate-700 text-slate-600 dark:text-slate-400 shadow-sm'
@@ -192,7 +237,7 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
                   <span>Owner: {agent.owner}</span>
                   <span className="font-bold text-brand-600 dark:text-brand-400">${(agent.max_transaction_limit || 0).toLocaleString()} max</span>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -208,21 +253,33 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
                   <p className="text-xs text-slate-500 dark:text-slate-400">Owner: {editOwner} • Version {editVersion}</p>
                 </div>
 
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm flex items-center space-x-1.5 transition-all"
-                >
-                  {savedSuccess ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-                  <span>{saving ? 'Saving...' : savedSuccess ? 'Saved!' : 'Save Changes'}</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  {agents.some((agent) => agent.id === selectedAgent.id) && <button
+                    type="button"
+                    onClick={handleArchive}
+                    disabled={saving}
+                    className="px-3 py-2 rounded-xl text-xs font-semibold border border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-900/50 dark:text-rose-300 dark:hover:bg-rose-950/30 flex items-center gap-1.5"
+                  >
+                    <Archive className="w-3.5 h-3.5" /> Archive
+                  </button>}
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm flex items-center space-x-1.5 transition-all"
+                  >
+                    {savedSuccess ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                    <span>{saving ? 'Saving...' : savedSuccess ? 'Saved!' : 'Save Changes'}</span>
+                  </button>
+                </div>
               </div>
 
               {/* Form Fields */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Agent Name</label>
+                  <label htmlFor="profile-agent-name" className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Agent Name</label>
                   <input
+                    id="profile-agent-name"
                     type="text"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
@@ -230,8 +287,9 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Owning Team</label>
+                  <label htmlFor="profile-owner" className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Owning Team</label>
                   <input
+                    id="profile-owner"
                     type="text"
                     value={editOwner}
                     onChange={(e) => setEditOwner(e.target.value)}
@@ -241,8 +299,9 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Agent Purpose & Scope</label>
+                <label htmlFor="profile-purpose" className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Agent Purpose & Scope</label>
                 <textarea
+                  id="profile-purpose"
                   rows={2}
                   value={editPurpose}
                   onChange={(e) => setEditPurpose(e.target.value)}
@@ -250,12 +309,18 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
                 />
               </div>
 
+              <div>
+                <label htmlFor="profile-version" className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Profile / Release Version</label>
+                <input id="profile-version" value={editVersion} onChange={(e) => setEditVersion(e.target.value)} placeholder="v1.0.0" className="w-full sm:w-1/2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+              </div>
+
               {/* Governance Controls */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
                 
                 <div>
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Governance Status</label>
+                  <label htmlFor="profile-status" className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Governance Status</label>
                   <select
+                    id="profile-status"
                     value={editStatus}
                     onChange={(e: any) => setEditStatus(e.target.value)}
                     className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 shadow-sm"
@@ -268,8 +333,9 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Risk Tier</label>
+                  <label htmlFor="profile-risk-tier" className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Risk Tier</label>
                   <select
+                    id="profile-risk-tier"
                     value={editRiskTier}
                     onChange={(e) => setEditRiskTier(e.target.value)}
                     className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 shadow-sm"
@@ -281,10 +347,11 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Autonomous Limit ($USD)</label>
+                  <label htmlFor="profile-limit" className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Autonomous Limit ($USD)</label>
                   <div className="relative">
                     <DollarSign className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
                     <input
+                      id="profile-limit"
                       type="number"
                       value={editLimit}
                       onChange={(e) => setEditLimit(Number(e.target.value))}
@@ -298,10 +365,11 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
               {/* Whitelist & Blacklist Boundaries */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                 <div>
-                  <label className="text-xs font-bold text-emerald-700 dark:text-emerald-400 block mb-1 flex items-center space-x-1">
+                    <label htmlFor="profile-allowed-actions" className="text-xs font-bold text-emerald-700 dark:text-emerald-400 block mb-1 flex items-center space-x-1">
                     <span>Allowed Capabilities Whitelist</span>
                   </label>
                   <textarea
+                    id="profile-allowed-actions"
                     rows={4}
                     value={allowedActionsText}
                     onChange={(e) => setAllowedActionsText(e.target.value)}
@@ -311,10 +379,11 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-rose-700 dark:text-rose-400 block mb-1 flex items-center space-x-1">
+                    <label htmlFor="profile-restricted-actions" className="text-xs font-bold text-rose-700 dark:text-rose-400 block mb-1 flex items-center space-x-1">
                     <span>Restricted Actions / Blacklist</span>
                   </label>
                   <textarea
+                    id="profile-restricted-actions"
                     rows={4}
                     value={restrictedActionsText}
                     onChange={(e) => setRestrictedActionsText(e.target.value)}
@@ -326,16 +395,34 @@ export const SafetyProfiles: React.FC<ProfilesProps> = ({ setActiveTab }) => {
 
               {/* Required Controls */}
               <div>
-                <label className="text-xs font-bold text-brand-700 dark:text-brand-300 block mb-1">
+                <label htmlFor="profile-controls" className="text-xs font-bold text-brand-700 dark:text-brand-300 block mb-1">
                   Required Governance Controls
                 </label>
                 <textarea
+                  id="profile-controls"
                   rows={3}
                   value={controlsText}
                   onChange={(e) => setControlsText(e.target.value)}
                   className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-brand-500 shadow-sm"
                   placeholder="human_approval_over_5k&#10;vendor_bank_change_dual_control"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="profile-change-reason" className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Change reason</label>
+                  <input id="profile-change-reason" value={changeReason} onChange={(e) => setChangeReason(e.target.value)} placeholder="Why is this boundary changing?" className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                </div>
+                <div className="rounded-xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 p-3 text-[11px] text-slate-600 dark:text-slate-400">
+                  <div className="font-bold text-slate-800 dark:text-slate-200 mb-1">Generated governance metadata</div>
+                  <div>Risk categories: {(selectedAgent.risk_categories || []).join(', ') || 'Not recorded'}</div>
+                  <div>Monitoring: {(selectedAgent.monitoring_requirements || []).join(', ') || 'Not recorded'}</div>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-200 dark:border-slate-800 pt-4">
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2"><History className="w-4 h-4 text-slate-400" /> Profile history</h4>
+                {historyLoading ? <p className="text-xs text-slate-500 mt-2">Loading profile history…</p> : profileHistory.length === 0 ? <p className="text-xs text-slate-500 mt-2">No version history is available yet.</p> : <div className="mt-2 space-y-2">{profileHistory.slice(0, 5).map((entry) => <div key={entry.id} className="rounded-lg bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 px-3 py-2 text-[11px]"><div className="flex justify-between gap-2"><span className="font-mono font-semibold">{entry.version}</span><span className="text-slate-500">{new Date(entry.created_at).toLocaleString()}</span></div><div className="text-slate-600 dark:text-slate-400 mt-1">{entry.change_reason || 'Profile change recorded.'}</div></div>)}</div>}
               </div>
 
             </div>

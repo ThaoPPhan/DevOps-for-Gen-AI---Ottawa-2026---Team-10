@@ -111,7 +111,8 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
     setTargetResource(s.target_resource);
     setPromptInput(s.prompt_input);
     setPayloadJson(JSON.stringify(s.payload, null, 2));
-    handleEvaluate(s.agent_id, s.action_name, s.target_resource, s.prompt_input, s.payload);
+    setResult(null);
+    setError(null);
   };
 
   const handleEvaluate = async (aid?: string, act?: string, target?: string, prompt?: string, customPayload?: any) => {
@@ -123,8 +124,17 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
         try {
           parsedPayload = JSON.parse(payloadJson);
         } catch {
-          parsedPayload = {};
+          setError('Payload must be valid JSON before it can be sent to the gateway.');
+          return;
         }
+      }
+      if (!parsedPayload || typeof parsedPayload !== 'object' || Array.isArray(parsedPayload)) {
+        setError('Payload must be a JSON object.');
+        return;
+      }
+      if (!((aid || agentId).trim()) || !((act || actionName).trim()) || !((target || targetResource).trim())) {
+        setError('Agent, action, and target resource are required.');
+        return;
       }
 
       const res = await api.evaluateGateway({
@@ -159,7 +169,7 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
       </div>
 
       {error && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-300">
+        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-300">
           {error}
         </div>
       )}
@@ -215,7 +225,9 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Agent ID</label>
+                <label htmlFor="sim-agent-id" className="sr-only">Agent ID</label>
                 <select
+                  id="sim-agent-id"
                   value={agentId}
                   onChange={(e) => setAgentId(e.target.value)}
                   className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 shadow-sm"
@@ -229,7 +241,9 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
 
               <div>
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Action / Tool Name</label>
+                <label htmlFor="sim-action-name" className="sr-only">Action / Tool Name</label>
                 <input
+                  id="sim-action-name"
                   type="text"
                   value={actionName}
                   onChange={(e) => setActionName(e.target.value)}
@@ -241,7 +255,9 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
 
             <div>
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Target Resource / Endpoint</label>
+              <label htmlFor="sim-target-resource" className="sr-only">Target Resource / Endpoint</label>
               <input
+                id="sim-target-resource"
                 type="text"
                 value={targetResource}
                 onChange={(e) => setTargetResource(e.target.value)}
@@ -252,7 +268,9 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
 
             <div>
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Prompt / Input Instruction</label>
+              <label htmlFor="sim-prompt-input" className="sr-only">Prompt / Input Instruction</label>
               <input
+                id="sim-prompt-input"
                 type="text"
                 value={promptInput}
                 onChange={(e) => setPromptInput(e.target.value)}
@@ -263,7 +281,9 @@ export const RuntimeSimulation: React.FC<SimulationProps> = ({ setActiveTab }) =
 
             <div>
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">JSON Payload Arguments</label>
+              <label htmlFor="sim-payload" className="sr-only">JSON Payload Arguments</label>
               <textarea
+                id="sim-payload"
                 rows={5}
                 value={payloadJson}
                 onChange={(e) => setPayloadJson(e.target.value)}

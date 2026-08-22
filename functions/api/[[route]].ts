@@ -10,13 +10,14 @@ export interface Env {
   AGENTICSCALE_KV: KVNamespace;
   ADMIN_API_KEY?: string;
   GATEWAY_API_KEY?: string;
+  ALERT_WEBHOOK_URL?: string;
   APP_VERSION?: string;
 }
 
 type JsonObject = Record<string, unknown>;
 
 const app = new Hono<{ Bindings: Env }>();
-const APP_VERSION = '2.0.0';
+const APP_VERSION = '2.1.0';
 const MAX_BODY_BYTES = 64 * 1024;
 const MAX_TEXT_LENGTH = 10_000;
 const ALLOWED_ORIGINS = new Set([
@@ -69,17 +70,27 @@ function isSameOriginRequest(request: Request): boolean {
   return fetchSite === 'same-origin' || fetchSite === 'same-site';
 }
 
-function hasAccess(request: Request, configuredKey?: string): boolean {
-  const suppliedKey = presentedApiKey(request);
-  if (configuredKey && suppliedKey && timingSafeEqual(configuredKey, suppliedKey)) return true;
-  return isSameOriginRequest(request);
+function isLocalRequest(request: Request): boolean {
+  const host = new URL(request.url).hostname;
+  return host === 'localhost' || host === '127.0.0.1';
 }
 
-function requireAccess(c: any, configuredKey: string | undefined, label: string) {
-  if (!hasAccess(c.req.raw, configuredKey)) {
-    return c.json({ error: `${label} access requires a same-origin request or API key.` }, 401);
+function hasAccess(request: Request, configuredKey?: string, allowSameOrigin = true): boolean {
+  const suppliedKey = presentedApiKey(request);
+  if (configuredKey && suppliedKey && timingSafeEqual(configuredKey, suppliedKey)) return true;
+  if (isLocalRequest(request)) return true;
+  return allowSameOrigin && isSameOriginRequest(request);
+}
+
+function requireAccess(c: any, configuredKey: string | undefined, label: string, allowSameOrigin = true) {
+  if (!hasAccess(c.req.raw, configuredKey, allowSameOrigin)) {
+    return c.json({ error: `${label} access requires an authenticated admin API key.` }, 401);
   }
   return undefined;
+}
+
+function parseJsonArrayOfStrings(value: unknown): string[] {
+  return parseJsonArray(value).filter((item): item is string => typeof item === 'string');
 }
 
 async function readJsonObject(c: any): Promise<JsonObject> {
@@ -151,10 +162,32 @@ function parseJsonArray(value: unknown): unknown[] {
 function toAgentContext(row: any): AgentContext {
   return {
     ...row,
-    allowed_actions: parseJsonArray(row.allowed_actions).filter((item): item is string => typeof item === 'string'),
-    restricted_actions: parseJsonArray(row.restricted_actions).filter((item): item is string => typeof item === 'string'),
-    required_controls: parseJsonArray(row.required_controls).filter((item): item is string => typeof item === 'string')
+    allowed_actions: parseJsonArrayOfStrings(row.allowed_actions),
+    restricted_actions: parseJsonArrayOfStrings(row.restricted_actions),
+    required_controls: parseJsonArrayOfStrings(row.required_controls),
+    risk_categories: parseJsonArrayOfStrings(row.risk_categories),
+    monitoring_requirements: parseJsonArrayOfStrings(row.monitoring_requirements)
   } as AgentContext;
+}
+
+async function consumeRateLimit(env: Env, agentId: string): Promise<boolean> {
+  if (!env.AGENTICSCALE_KV) return true;
+  const bucket = Math.floor(Date.now() / 60_000);
+  const key = `rate:${agentId}:${bucket}`;
+  const current = Number(await env.AGENTICSCALE_KV.get(key) || 0);
+  if (current >= 120) return false;
+  await env.AGENTICSCALE_KV.put(key, String(current + 1), { expirationTtl: 120 });
+  return true;
+}
+
+function notifyIncident(c: any, payload: Record<string, unknown>): void {
+  const webhook = c.env.ALERT_WEBHOOK_URL;
+  if (!webhook) return;
+  c.executionCtx?.waitUntil?.(fetch(webhook, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ source: 'AgenticScale', ...payload })
+  }).catch((error) => console.error(JSON.stringify({ event: 'alert_webhook_failed', error: String(error) }))));
 }
 
 function addSecurityHeaders(c: any, origin: string | undefined): void {
@@ -188,7 +221,7 @@ app.use('*', async (c, next) => {
 
 app.get('/api/health', async (c) => {
   try {
-    const result = await c.env.DB.prepare('SELECT COUNT(*) as count FROM agents').first<{ count: number }>();
+    const result = await c.env.DB.prepare('SELECT COUNT(*) as count FROM agents WHERE archived_at IS NULL').first<{ count: number }>();
     return c.json({
       status: 'online',
       version: c.env.APP_VERSION || APP_VERSION,
@@ -225,12 +258,14 @@ app.get('/api/agents', async (c) => {
   if (denied) return denied;
 
   try {
-    const { results } = await c.env.DB.prepare('SELECT * FROM agents ORDER BY created_at DESC').all();
+    const { results } = await c.env.DB.prepare('SELECT * FROM agents WHERE archived_at IS NULL ORDER BY created_at DESC').all();
     return c.json(results.map((row: any) => ({
       ...row,
-      allowed_actions: parseJsonArray(row.allowed_actions),
-      restricted_actions: parseJsonArray(row.restricted_actions),
-      required_controls: parseJsonArray(row.required_controls)
+      allowed_actions: parseJsonArrayOfStrings(row.allowed_actions),
+      restricted_actions: parseJsonArrayOfStrings(row.restricted_actions),
+      required_controls: parseJsonArrayOfStrings(row.required_controls),
+      risk_categories: parseJsonArrayOfStrings(row.risk_categories),
+      monitoring_requirements: parseJsonArrayOfStrings(row.monitoring_requirements)
     })));
   } catch (error) {
     console.error(JSON.stringify({ event: 'agents_read_failed', error: String(error) }));
@@ -239,7 +274,7 @@ app.get('/api/agents', async (c) => {
 });
 
 app.post('/api/agents', async (c) => {
-  const denied = requireAccess(c, c.env.ADMIN_API_KEY, 'Agent registry');
+  const denied = requireAccess(c, c.env.ADMIN_API_KEY, 'Agent registry', false);
   if (denied) return denied;
 
   try {
@@ -259,11 +294,14 @@ app.post('/api/agents', async (c) => {
     const allowedActions = stringArrayField(body, 'allowed_actions');
     const restrictedActions = stringArrayField(body, 'restricted_actions');
     const requiredControls = stringArrayField(body, 'required_controls');
+    const riskCategories = stringArrayField(body, 'risk_categories');
+    const monitoringRequirements = stringArrayField(body, 'monitoring_requirements');
+    const changeReason = stringField(body, 'change_reason', false, 500) || 'Profile updated through governance console.';
 
     await c.env.DB.prepare(`
       INSERT INTO agents
-        (id, name, owner, purpose, version, status, risk_score, blast_radius, allowed_actions, restricted_actions, required_controls, max_transaction_limit, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        (id, name, owner, purpose, version, status, risk_score, blast_radius, allowed_actions, restricted_actions, required_controls, max_transaction_limit, risk_categories, monitoring_requirements, archived_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, CURRENT_TIMESTAMP)
       ON CONFLICT(id) DO UPDATE SET
         name = excluded.name,
         owner = excluded.owner,
@@ -276,10 +314,26 @@ app.post('/api/agents', async (c) => {
         restricted_actions = excluded.restricted_actions,
         required_controls = excluded.required_controls,
         max_transaction_limit = excluded.max_transaction_limit,
+        risk_categories = excluded.risk_categories,
+        monitoring_requirements = excluded.monitoring_requirements,
+        archived_at = NULL,
         updated_at = CURRENT_TIMESTAMP
     `).bind(
       id, name, owner, purpose, version, status, riskScore, blastRadius,
-      JSON.stringify(allowedActions), JSON.stringify(restrictedActions), JSON.stringify(requiredControls), maxTransactionLimit
+      JSON.stringify(allowedActions), JSON.stringify(restrictedActions), JSON.stringify(requiredControls), maxTransactionLimit,
+      JSON.stringify(riskCategories), JSON.stringify(monitoringRequirements)
+    ).run();
+
+    await c.env.DB.prepare(`
+      INSERT INTO agent_profile_versions (id, agent_id, version, snapshot_json, changed_by, change_reason)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(
+      `profile-${crypto.randomUUID()}`,
+      id,
+      version,
+      JSON.stringify({ id, name, owner, purpose, version, status, risk_score: riskScore, blast_radius: blastRadius, allowed_actions: allowedActions, restricted_actions: restrictedActions, required_controls: requiredControls, max_transaction_limit: maxTransactionLimit, risk_categories: riskCategories, monitoring_requirements: monitoringRequirements }),
+      presentedApiKey(c.req.raw) ? 'api-key' : 'local-development',
+      changeReason
     ).run();
 
     return c.json({ success: true, id, message: 'Agent safety profile saved successfully.' });
@@ -298,13 +352,50 @@ app.get('/api/agents/:id', async (c) => {
     if (!agent) return c.json({ error: 'Agent not found.' }, 404);
     return c.json({
       ...agent,
-      allowed_actions: parseJsonArray(agent.allowed_actions),
-      restricted_actions: parseJsonArray(agent.restricted_actions),
-      required_controls: parseJsonArray(agent.required_controls)
+      allowed_actions: parseJsonArrayOfStrings(agent.allowed_actions),
+      restricted_actions: parseJsonArrayOfStrings(agent.restricted_actions),
+      required_controls: parseJsonArrayOfStrings(agent.required_controls),
+      risk_categories: parseJsonArrayOfStrings(agent.risk_categories),
+      monitoring_requirements: parseJsonArrayOfStrings(agent.monitoring_requirements)
     });
   } catch (error) {
     console.error(JSON.stringify({ event: 'agent_read_failed', error: String(error) }));
     return c.json({ error: 'Agent registry is unavailable.' }, 503);
+  }
+});
+
+app.get('/api/agents/:id/history', async (c) => {
+  const denied = requireAccess(c, c.env.ADMIN_API_KEY, 'Profile history');
+  if (denied) return denied;
+
+  try {
+    const { results } = await c.env.DB.prepare(`
+      SELECT id, agent_id, version, snapshot_json, changed_by, change_reason, created_at
+      FROM agent_profile_versions
+      WHERE agent_id = ?
+      ORDER BY created_at DESC
+      LIMIT 50
+    `).bind(c.req.param('id')).all();
+    return c.json(results.map((row: any) => ({
+      ...row,
+      snapshot_json: typeof row.snapshot_json === 'string' ? JSON.parse(row.snapshot_json || '{}') : row.snapshot_json
+    })));
+  } catch (error) {
+    console.error(JSON.stringify({ event: 'profile_history_failed', error: String(error) }));
+    return c.json({ error: 'Profile history is unavailable.' }, 503);
+  }
+});
+
+app.post('/api/agents/:id/archive', async (c) => {
+  const denied = requireAccess(c, c.env.ADMIN_API_KEY, 'Agent archive', false);
+  if (denied) return denied;
+  try {
+    const result = await c.env.DB.prepare('UPDATE agents SET archived_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND archived_at IS NULL').bind(c.req.param('id')).run();
+    if (!result.meta.changes) return c.json({ error: 'Active agent not found.' }, 404);
+    return c.json({ success: true, message: 'Agent profile archived.' });
+  } catch (error) {
+    console.error(JSON.stringify({ event: 'agent_archive_failed', error: String(error) }));
+    return c.json({ error: 'Unable to archive agent profile.' }, 503);
   }
 });
 
@@ -322,7 +413,7 @@ app.get('/api/policies', async (c) => {
 });
 
 app.post('/api/validate', async (c) => {
-  const denied = requireAccess(c, c.env.ADMIN_API_KEY, 'Validation');
+  const denied = requireAccess(c, c.env.ADMIN_API_KEY, 'Validation', false);
   if (denied) return denied;
 
   try {
@@ -338,18 +429,70 @@ app.post('/api/validate', async (c) => {
 
     await c.env.DB.prepare(`
       INSERT INTO validation_runs
-        (id, agent_id, version, status, total_tests, passed_tests, failed_tests, safety_score, recommendation, details_json)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (id, agent_id, version, status, total_tests, passed_tests, failed_tests, flagged_tests, safety_score, recommendation, details_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       report.id, agentId, version, report.overall_status, report.total_tests,
-      report.passed_tests, report.failed_tests + report.flagged_tests,
+      report.passed_tests, report.failed_tests, report.flagged_tests,
       report.safety_score, report.recommendation, JSON.stringify(report.suites)
     ).run();
 
-    return c.json({ ...report, run_id: report.id });
+    return c.json({ ...report, run_id: report.id, release_decision: 'pending' });
   } catch (error) {
     console.error(JSON.stringify({ event: 'validation_failed', error: String(error) }));
     return jsonError(c, error instanceof Error ? error.message : 'Validation failed.', 422);
+  }
+});
+
+app.post('/api/validate/:id/release', async (c) => {
+  const denied = requireAccess(c, c.env.ADMIN_API_KEY, 'Release governance', false);
+  if (denied) return denied;
+
+  try {
+    const body = await readJsonObject(c);
+    const decision = stringField(body, 'decision', true, 20);
+    const note = stringField(body, 'note', false, 1_000);
+    if (!['approve', 'reject'].includes(decision)) return c.json({ error: 'Release decision must be approve or reject.' }, 422);
+
+    const run: any = await c.env.DB.prepare(`
+      SELECT v.id, v.agent_id, v.version, v.status, v.release_decision, a.status as agent_status, a.archived_at
+      FROM validation_runs v
+      LEFT JOIN agents a ON v.agent_id = a.id
+      WHERE v.id = ?
+    `).bind(c.req.param('id')).first();
+    if (!run) return c.json({ error: 'Validation run not found.' }, 404);
+    if (run.release_decision === 'approved') return c.json({ error: 'This validation run has already been approved.' }, 409);
+    if (decision === 'approve' && run.status !== 'passed') {
+      return c.json({ error: 'Only validation runs with a passed status can be approved for release.' }, 422);
+    }
+    if (decision === 'approve' && run.agent_status === 'quarantined') {
+      return c.json({ error: 'Quarantined agents require a separate incident recovery decision before release.' }, 422);
+    }
+
+    const releaseDecision = decision === 'approve' ? 'approved' : 'rejected';
+    const actor = presentedApiKey(c.req.raw) ? 'api-key' : 'local-development';
+    await c.env.DB.batch([
+      c.env.DB.prepare(`
+        UPDATE validation_runs
+        SET release_decision = ?, release_note = ?, released_by = ?, released_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).bind(releaseDecision, note || null, actor, c.req.param('id')),
+      ...(decision === 'approve' ? [c.env.DB.prepare(`
+        UPDATE agents
+        SET status = 'protected', version = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND archived_at IS NULL
+      `).bind(run.version, run.agent_id)] : [])
+    ]);
+
+    return c.json({
+      success: true,
+      release_decision: releaseDecision,
+      agent_status: decision === 'approve' ? 'protected' : run.agent_status,
+      message: decision === 'approve' ? 'Validation approved and the agent is now protected.' : 'Validation release was rejected and remains blocked from automatic promotion.'
+    });
+  } catch (error) {
+    console.error(JSON.stringify({ event: 'release_decision_failed', error: String(error) }));
+    return jsonError(c, error instanceof Error ? error.message : 'Unable to record release decision.', 422);
   }
 });
 
@@ -387,17 +530,31 @@ app.post('/api/gateway/evaluate', async (c) => {
     const payload = body.payload === undefined ? {} : body.payload;
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('payload must be a JSON object.');
 
-    const rawAgent: any = await c.env.DB.prepare('SELECT * FROM agents WHERE id = ?').bind(agentId).first();
+    const rawAgent: any = await c.env.DB.prepare('SELECT * FROM agents WHERE id = ? AND archived_at IS NULL').bind(agentId).first();
     if (!rawAgent) return c.json({ error: 'Unknown agent. Register a safety profile before evaluating actions.' }, 404);
     const agent = toAgentContext(rawAgent);
 
-    const evaluation = evaluateAgentAction({
+    let evaluation = evaluateAgentAction({
       agent_id: agentId,
       action_name: actionName,
       target_resource: targetResource,
       payload: payload as Record<string, unknown>,
       prompt_input: promptInput
     }, agent);
+
+    const withinRateLimit = await consumeRateLimit(c.env, agentId);
+    if (!withinRateLimit) {
+      evaluation = {
+        ...evaluation,
+        decision: 'REVIEW',
+        risk_score: Math.max(evaluation.risk_score, 83),
+        reasons: ['Agent action rate limit exceeded for the current minute.', 'Circuit-breaker review is required before further autonomous execution.'],
+        mitigation: 'Execution held while the rate-limit circuit breaker is active.',
+        incident_created: true,
+        incident_severity: 'P2',
+        runbook_steps: ['1. Pause the action source.', '2. Inspect recent action frequency and intent.', '3. Resume only after the rate returns within policy.']
+      };
+    }
 
     const eventId = `evt-${crypto.randomUUID()}`;
     const payloadSummary = stringField(body, 'summary', false, 500) || `${actionName} on ${targetResource}`;
@@ -410,8 +567,9 @@ app.post('/api/gateway/evaluate', async (c) => {
       evaluation.risk_score, JSON.stringify(evaluation.reasons), evaluation.mitigation, evaluation.latency_ms
     )];
 
+    let incidentId: string | undefined;
     if (evaluation.incident_created && evaluation.incident_severity) {
-      const incidentId = `inc-${crypto.randomUUID()}`;
+      incidentId = `inc-${crypto.randomUUID()}`;
       statements.push(c.env.DB.prepare(`
         INSERT INTO incidents
           (id, agent_id, event_id, severity, title, summary, runbook_steps, status)
@@ -421,6 +579,10 @@ app.post('/api/gateway/evaluate', async (c) => {
         `${evaluation.decision}: Unsafe ${actionName} detected for ${agent.name}`,
         evaluation.reasons.join('. '), JSON.stringify(evaluation.runbook_steps || [])
       ));
+
+      if (evaluation.decision === 'BLOCK' && evaluation.incident_severity === 'P1') {
+        statements.push(c.env.DB.prepare("UPDATE agents SET status = 'quarantined', updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(agentId));
+      }
     }
 
     try {
@@ -430,7 +592,20 @@ app.post('/api/gateway/evaluate', async (c) => {
       return c.json({ error: 'Safety telemetry is unavailable; action was not authorized.', decision: 'REVIEW' }, 503);
     }
 
-    return c.json({ event_id: eventId, ...evaluation });
+    if (incidentId) {
+      notifyIncident(c, {
+        incident_id: incidentId,
+        event_id: eventId,
+        agent_id: agentId,
+        agent_name: agent.name,
+        decision: evaluation.decision,
+        severity: evaluation.incident_severity,
+        action_name: actionName,
+        reasons: evaluation.reasons
+      });
+    }
+
+    return c.json({ event_id: eventId, incident_id: incidentId, ...evaluation });
   } catch (error) {
     console.error(JSON.stringify({ event: 'gateway_request_failed', error: String(error) }));
     return jsonError(c, error instanceof Error ? error.message : 'Gateway request failed.', 422);
@@ -442,16 +617,17 @@ app.get('/api/dashboard/stats', async (c) => {
   if (denied) return denied;
 
   try {
-    const [agentsCount, protectedCount, monitoringCount, atRiskCount, totalEvents, allowedEvents, reviewEvents, blockedEvents, openIncidents, patternRows] = await Promise.all([
-      c.env.DB.prepare('SELECT COUNT(*) as count FROM agents').first<{ count: number }>(),
-      c.env.DB.prepare("SELECT COUNT(*) as count FROM agents WHERE status = 'protected'").first<{ count: number }>(),
-      c.env.DB.prepare("SELECT COUNT(*) as count FROM agents WHERE status = 'monitoring'").first<{ count: number }>(),
-      c.env.DB.prepare("SELECT COUNT(*) as count FROM agents WHERE status IN ('at_risk', 'quarantined')").first<{ count: number }>(),
+    const [agentsCount, protectedCount, monitoringCount, atRiskCount, quarantinedCount, totalEvents, allowedEvents, reviewEvents, blockedEvents, openIncidents, patternRows] = await Promise.all([
+      c.env.DB.prepare('SELECT COUNT(*) as count FROM agents WHERE archived_at IS NULL').first<{ count: number }>(),
+      c.env.DB.prepare("SELECT COUNT(*) as count FROM agents WHERE status = 'protected' AND archived_at IS NULL").first<{ count: number }>(),
+      c.env.DB.prepare("SELECT COUNT(*) as count FROM agents WHERE status = 'monitoring' AND archived_at IS NULL").first<{ count: number }>(),
+      c.env.DB.prepare("SELECT COUNT(*) as count FROM agents WHERE status = 'at_risk' AND archived_at IS NULL").first<{ count: number }>(),
+      c.env.DB.prepare("SELECT COUNT(*) as count FROM agents WHERE status = 'quarantined' AND archived_at IS NULL").first<{ count: number }>(),
       c.env.DB.prepare('SELECT COUNT(*) as count FROM safety_events').first<{ count: number }>(),
       c.env.DB.prepare("SELECT COUNT(*) as count FROM safety_events WHERE decision = 'ALLOW'").first<{ count: number }>(),
       c.env.DB.prepare("SELECT COUNT(*) as count FROM safety_events WHERE decision = 'REVIEW'").first<{ count: number }>(),
       c.env.DB.prepare("SELECT COUNT(*) as count FROM safety_events WHERE decision = 'BLOCK'").first<{ count: number }>(),
-      c.env.DB.prepare("SELECT COUNT(*) as count FROM incidents WHERE status = 'open'").first<{ count: number }>(),
+      c.env.DB.prepare("SELECT COUNT(*) as count FROM incidents WHERE status != 'resolved'").first<{ count: number }>(),
       c.env.DB.prepare(`
         SELECT CASE
           WHEN action_name IN ('send_payment', 'update_vendor_account') THEN 'Financial Operations'
@@ -488,7 +664,8 @@ app.get('/api/dashboard/stats', async (c) => {
         total_agents: agentsCount?.count ?? 0,
         protected: protectedCount?.count ?? 0,
         monitoring: monitoringCount?.count ?? 0,
-        at_risk: atRiskCount?.count ?? 0
+        at_risk: atRiskCount?.count ?? 0,
+        quarantined: quarantinedCount?.count ?? 0
       },
       telemetry: {
         total_events: total,
@@ -553,7 +730,7 @@ app.get('/api/incidents', async (c) => {
 
   try {
     const { results } = await c.env.DB.prepare(`
-      SELECT i.*, a.name as agent_name, e.action_name, e.target_resource, e.timestamp as event_time
+      SELECT i.*, a.name as agent_name, e.action_name, e.target_resource, e.decision, e.timestamp as event_time
       FROM incidents i
       LEFT JOIN agents a ON i.agent_id = a.id
       LEFT JOIN safety_events e ON i.event_id = e.id
@@ -567,18 +744,65 @@ app.get('/api/incidents', async (c) => {
 });
 
 app.post('/api/incidents/:id/resolve', async (c) => {
-  const denied = requireAccess(c, c.env.ADMIN_API_KEY, 'Incident registry');
+  const denied = requireAccess(c, c.env.ADMIN_API_KEY, 'Incident registry', false);
   if (denied) return denied;
 
   try {
     const body = await readJsonObject(c);
     const status = stringField(body, 'status', false, 20) || 'resolved';
     if (!['acknowledged', 'resolved'].includes(status)) return c.json({ error: 'Invalid incident status.' }, 422);
-    const result = await c.env.DB.prepare('UPDATE incidents SET status = ? WHERE id = ?').bind(status, c.req.param('id')).run();
+    const result = await c.env.DB.prepare('UPDATE incidents SET status = ?, resolution = ?, resolved_by = ?, resolved_at = CASE WHEN ? = \'resolved\' THEN CURRENT_TIMESTAMP ELSE resolved_at END WHERE id = ?')
+      .bind(status, status === 'resolved' ? 'resolved' : 'acknowledged', presentedApiKey(c.req.raw) ? 'api-key' : 'local-development', status, c.req.param('id')).run();
     if (!result.meta.changes) return c.json({ error: 'Incident not found.' }, 404);
     return c.json({ success: true, message: `Incident ${c.req.param('id')} marked as ${status}.` });
   } catch (error) {
     console.error(JSON.stringify({ event: 'incident_update_failed', error: String(error) }));
+    return jsonError(c, error instanceof Error ? error.message : 'Unable to update incident.', 422);
+  }
+});
+
+app.post('/api/incidents/:id/action', async (c) => {
+  const denied = requireAccess(c, c.env.ADMIN_API_KEY, 'Incident workflow', false);
+  if (denied) return denied;
+
+  try {
+    const body = await readJsonObject(c);
+    const action = stringField(body, 'action', true, 20);
+    const note = stringField(body, 'note', false, 1_000);
+    if (!['acknowledge', 'approve', 'reject', 'resolve'].includes(action)) {
+      return c.json({ error: 'Invalid incident workflow action.' }, 422);
+    }
+
+    const incident: any = await c.env.DB.prepare(`
+      SELECT i.*, e.decision
+      FROM incidents i
+      LEFT JOIN safety_events e ON i.event_id = e.id
+      WHERE i.id = ?
+    `).bind(c.req.param('id')).first();
+    if (!incident) return c.json({ error: 'Incident not found.' }, 404);
+    if (incident.status === 'resolved') return c.json({ error: 'Incident is already resolved.' }, 409);
+    if ((action === 'approve' || action === 'reject') && incident.decision !== 'REVIEW') {
+      return c.json({ error: 'Only held-for-review actions can be approved or rejected.' }, 422);
+    }
+
+    const nextStatus = action === 'acknowledge' ? 'acknowledged' : 'resolved';
+    const resolution = action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : action;
+    await c.env.DB.prepare(`
+      UPDATE incidents
+      SET status = ?, resolution = ?, resolution_note = ?, resolved_by = ?, resolved_at = CASE WHEN ? = 'resolved' THEN CURRENT_TIMESTAMP ELSE resolved_at END
+      WHERE id = ?
+    `).bind(
+      nextStatus,
+      resolution,
+      note,
+      presentedApiKey(c.req.raw) ? 'api-key' : 'local-development',
+      nextStatus,
+      c.req.param('id')
+    ).run();
+
+    return c.json({ success: true, status: nextStatus, resolution, message: `Incident ${c.req.param('id')} ${resolution}.` });
+  } catch (error) {
+    console.error(JSON.stringify({ event: 'incident_workflow_failed', error: String(error) }));
     return jsonError(c, error instanceof Error ? error.message : 'Unable to update incident.', 422);
   }
 });

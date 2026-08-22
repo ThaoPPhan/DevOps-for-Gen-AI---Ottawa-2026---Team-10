@@ -13,6 +13,8 @@ export interface AgentContext {
   restricted_actions: string[];
   required_controls: string[];
   max_transaction_limit: number;
+  risk_categories?: string[];
+  monitoring_requirements?: string[];
 }
 
 export interface EvaluateRequest {
@@ -141,6 +143,18 @@ export function evaluateAgentAction(request: EvaluateRequest, agent?: AgentConte
     );
   }
 
+  if (agent.status === 'at_risk') {
+    return result(
+      startTime,
+      'REVIEW',
+      82,
+      [`Agent '${agent.name}' is marked at risk and requires governance review before autonomous execution.`],
+      'Execution held while the agent risk posture is remediated or explicitly approved.',
+      'P2',
+      ['1. Review the agent profile and recent incidents.', '2. Re-run validation after remediation.', '3. Require an authorized operator to restore protected status.']
+    );
+  }
+
   const matchedInjection = INJECTION_PATTERNS.some((pattern) => pattern.test(payloadString));
   if (matchedInjection || payload.contains_injection_pattern === true || payload.instruction_override === true) {
     return result(
@@ -158,6 +172,47 @@ export function evaluateAgentAction(request: EvaluateRequest, agent?: AgentConte
         '2. Prompt Defense Review: Update input sanitization and guardrail classifiers.',
         '3. Re-validate the agent before restoring autonomous execution.'
       ]
+    );
+  }
+
+  const missingInformation = payload.required_fields_missing === true
+    || (Array.isArray(payload.missing_required_fields) && payload.missing_required_fields.length > 0);
+  if (missingInformation || (action === 'send_payment' && payload.amount === undefined)) {
+    return result(
+      startTime,
+      'REVIEW',
+      72,
+      ['Required transaction or identity information is missing.', 'Autonomous execution cannot continue while the request is ambiguous.'],
+      'Action held until the missing fields are supplied and independently verified.',
+      'P2',
+      ['1. Identify the missing fields.', '2. Obtain the authoritative source data.', '3. Re-submit the action after validation.']
+    );
+  }
+
+  const anomalyScore = typeof payload.anomaly_score === 'number' ? payload.anomaly_score : Number(payload.anomaly_score || 0);
+  const suspiciousAnomaly = payload.suspicious === true || (Number.isFinite(anomalyScore) && anomalyScore >= 0.8);
+  if (suspiciousAnomaly) {
+    return result(
+      startTime,
+      'REVIEW',
+      86,
+      [`Suspicious behavioral anomaly detected${Number.isFinite(anomalyScore) && anomalyScore > 0 ? ` (score ${anomalyScore.toFixed(2)})` : ''}.`, 'Human investigation is required before the action can proceed.'],
+      'Action held for fraud or trust-and-safety investigation.',
+      'P2',
+      ['1. Preserve the related evidence and transaction context.', '2. Review the anomaly with the owning risk team.', '3. Approve or reject the action through the incident workflow.']
+    );
+  }
+
+  const burstCount = typeof payload.burst_count === 'number' ? payload.burst_count : Number(payload.burst_count || 0);
+  if (Number.isFinite(burstCount) && burstCount > 10) {
+    return result(
+      startTime,
+      'REVIEW',
+      80,
+      [`Burst rate of ${burstCount} similar actions exceeds the configured safety threshold.`, 'Rate limiting and circuit-breaker review is required.'],
+      'Action held while the burst is investigated and the agent rate limit is enforced.',
+      'P2',
+      ['1. Pause the burst source.', '2. Inspect recent action frequency and intent.', '3. Resume only after the rate is within policy.']
     );
   }
 

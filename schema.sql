@@ -13,8 +13,22 @@ CREATE TABLE IF NOT EXISTS agents (
     restricted_actions TEXT NOT NULL, -- JSON Array
     required_controls TEXT NOT NULL, -- JSON Array
     max_transaction_limit REAL DEFAULT 0,
+    risk_categories TEXT NOT NULL DEFAULT '[]', -- JSON Array
+    monitoring_requirements TEXT NOT NULL DEFAULT '[]', -- JSON Array
+    archived_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS agent_profile_versions (
+    id TEXT PRIMARY KEY,
+    agent_id TEXT NOT NULL,
+    version TEXT NOT NULL,
+    snapshot_json TEXT NOT NULL,
+    changed_by TEXT NOT NULL DEFAULT 'system',
+    change_reason TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(agent_id) REFERENCES agents(id)
 );
 
 CREATE TABLE IF NOT EXISTS safety_policies (
@@ -37,9 +51,14 @@ CREATE TABLE IF NOT EXISTS validation_runs (
     total_tests INTEGER NOT NULL,
     passed_tests INTEGER NOT NULL,
     failed_tests INTEGER NOT NULL,
+    flagged_tests INTEGER NOT NULL DEFAULT 0,
     safety_score REAL NOT NULL,
     recommendation TEXT NOT NULL,
     details_json TEXT NOT NULL,
+    release_decision TEXT NOT NULL DEFAULT 'pending' CHECK(release_decision IN ('pending', 'approved', 'rejected')),
+    release_note TEXT,
+    released_by TEXT,
+    released_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(agent_id) REFERENCES agents(id)
 );
@@ -67,6 +86,10 @@ CREATE TABLE IF NOT EXISTS incidents (
     summary TEXT NOT NULL,
     runbook_steps TEXT NOT NULL, -- JSON Array
     status TEXT NOT NULL CHECK(status IN ('open', 'acknowledged', 'resolved')),
+    resolution TEXT,
+    resolution_note TEXT,
+    resolved_by TEXT,
+    resolved_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(agent_id) REFERENCES agents(id),
     FOREIGN KEY(event_id) REFERENCES safety_events(id)
@@ -78,3 +101,5 @@ CREATE INDEX IF NOT EXISTS idx_events_agent ON safety_events(agent_id);
 CREATE INDEX IF NOT EXISTS idx_events_decision ON safety_events(decision);
 CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status);
 CREATE INDEX IF NOT EXISTS idx_validation_agent ON validation_runs(agent_id);
+CREATE INDEX IF NOT EXISTS idx_profile_versions_agent ON agent_profile_versions(agent_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents(status);

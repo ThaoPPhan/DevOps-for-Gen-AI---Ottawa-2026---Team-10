@@ -11,6 +11,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { api, ValidationHistoryRecord } from '../services/api';
+import { Agent } from '../types';
 
 interface ValidationProps {
   setActiveTab: (tab: string) => void;
@@ -25,13 +26,29 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
   const [history, setHistory] = useState<ValidationHistoryRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [expandedSuite, setExpandedSuite] = useState<number | null>(null);
+  const [candidateAgents, setCandidateAgents] = useState<Agent[]>([]);
+  const [loadingAgents, setLoadingAgents] = useState<boolean>(true);
+  const [releasePending, setReleasePending] = useState<boolean>(false);
+  const [releaseNote, setReleaseNote] = useState<string>('');
 
-  const candidateAgents = [
-    { id: 'agent-fraud-02', name: 'Fraud Analysis Agent', version: 'v2.0.0-rc1', badge: 'Pre-Release Candidate' },
-    { id: 'agent-invoice-01', name: 'Invoice & Payment Agent', version: 'v1.4.2', badge: 'Production Certified' },
-    { id: 'agent-support-01', name: 'Customer Support Copilot', version: 'v3.1.0', badge: 'Production Active' },
-    { id: 'agent-devops-01', name: 'Infrastructure Auto-Healer', version: 'v1.1.0', badge: 'High Privilege Candidate' }
-  ];
+  const loadAgents = async () => {
+    setLoadingAgents(true);
+    try {
+      const data = await api.getAgents();
+      setCandidateAgents(data);
+      const selected = data.find((agent) => agent.id === selectedAgentId) || data[0];
+      if (selected) {
+        setSelectedAgentId(selected.id);
+        setAgentName(selected.name);
+        setVersion(selected.version);
+      }
+    } catch (err) {
+      console.error('Error fetching validation candidates:', err);
+      setError(err instanceof Error ? err.message : 'Validation candidates are unavailable.');
+    } finally {
+      setLoadingAgents(false);
+    }
+  };
 
   const loadHistory = async () => {
     try {
@@ -45,6 +62,7 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
 
   useEffect(() => {
     loadHistory();
+    loadAgents();
   }, []);
 
   const handleRunValidation = async (agentId?: string, name?: string, ver?: string) => {
@@ -52,18 +70,39 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
     const aname = name || agentName;
     const aver = ver || version;
 
+    if (!aid || !aver.trim()) {
+      setError('Select an agent and enter a release version before running validation.');
+      return;
+    }
+
     setRunning(true);
     setCurrentReport(null);
     setError(null);
     try {
       const report = await api.validateAgent(aid, aname, aver);
       setCurrentReport(report);
+      setReleaseNote('');
       await loadHistory();
     } catch (err) {
       console.error('Error running validation suite:', err);
       setError(err instanceof Error ? err.message : 'Validation could not be completed.');
     } finally {
       setRunning(false);
+    }
+  };
+
+  const handleReleaseDecision = async (decision: 'approve' | 'reject') => {
+    if (!currentReport?.run_id) return;
+    setReleasePending(true);
+    setError(null);
+    try {
+      const result = await api.releaseValidation(currentReport.run_id, decision, releaseNote);
+      setCurrentReport((previous: any) => ({ ...previous, release_decision: result.release_decision, agent_status: result.agent_status }));
+      await Promise.all([loadHistory(), loadAgents()]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Release decision could not be recorded.');
+    } finally {
+      setReleasePending(false);
     }
   };
 
@@ -76,12 +115,12 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
           Pre-Release Behavioral Safety Validation
         </h1>
         <p className="text-slate-600 dark:text-slate-400 text-sm mt-1.5 max-w-3xl">
-          Validate agent safety behavior across normal, ambiguous, adversarial prompt injection, and permission abuse boundary tests before authorizing deployment to production.
+          Validate agent safety behavior across normal, ambiguous, adversarial prompt injection, and permission abuse boundary tests before promoting a profile to protected status.
         </p>
       </div>
 
       {error && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-300">
+        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-300">
           {error}
         </div>
       )}
@@ -94,14 +133,14 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
               Select Candidate AI Agent & Release Version:
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {candidateAgents.map((ag) => (
+              {loadingAgents ? <p className="text-xs text-slate-500">Loading registered profiles…</p> : candidateAgents.length === 0 ? <p className="text-xs text-slate-500">No active profiles are available for validation.</p> : candidateAgents.map((ag) => (
                 <button
+                  type="button"
                   key={ag.id}
                   onClick={() => {
                     setSelectedAgentId(ag.id);
                     setAgentName(ag.name);
                     setVersion(ag.version);
-                    handleRunValidation(ag.id, ag.name, ag.version);
                   }}
                   className={`p-3 text-left rounded-xl border transition-all text-xs ${
                     selectedAgentId === ag.id
@@ -115,14 +154,17 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
                       {ag.version}
                     </span>
                   </div>
-                  <div className="text-[11px] text-brand-700 dark:text-brand-400 font-semibold mt-1">{ag.badge}</div>
+                  <div className="text-[11px] text-brand-700 dark:text-brand-400 font-semibold mt-1">{ag.status === 'quarantined' ? 'Quarantined' : ag.status === 'at_risk' ? 'At-Risk Candidate' : ag.status === 'protected' ? 'Protected Profile' : 'Monitoring Profile'}</div>
                 </button>
               ))}
             </div>
           </div>
 
           <div className="self-end md:self-center">
+            <label htmlFor="validation-version" className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">Candidate version</label>
+            <input id="validation-version" value={version} onChange={(event) => setVersion(event.target.value)} className="w-full mb-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-white" placeholder="v2.1.0-rc1" />
             <button
+              type="button"
               onClick={() => handleRunValidation()}
               disabled={running}
               className="px-6 py-3 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white shadow-md shadow-brand-500/20 transition-all flex items-center space-x-2 w-full sm:w-auto justify-center"
@@ -133,6 +175,14 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
           </div>
         </div>
       </div>
+
+      {history.length > 0 && (
+        <div className="glass-panel p-6 rounded-2xl">
+          <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><History className="w-4 h-4 text-slate-400" /> Validation history</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Historical runs are loaded independently of a new test run.</p>
+          <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead className="text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800"><tr><th className="py-2.5 px-3">Agent</th><th className="py-2.5 px-3">Version</th><th className="py-2.5 px-3">Assessment</th><th className="py-2.5 px-3">Release</th><th className="py-2.5 px-3">Date</th></tr></thead><tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">{history.slice(0, 20).map((h) => <tr key={h.id}><td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">{h.agent_name || h.agent_id}</td><td className="py-2.5 px-3 font-mono">{h.version}</td><td className="py-2.5 px-3"><span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase ${h.status === 'passed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300'}`}>{h.status === 'passed' ? 'Passed' : 'Review Required'}</span></td><td className="py-2.5 px-3"><span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase ${h.release_decision === 'approved' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300' : h.release_decision === 'rejected' ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}>{h.release_decision || 'Pending'}</span></td><td className="py-2.5 px-3 text-slate-500">{new Date(h.created_at).toLocaleString()}</td></tr>)}</tbody></table></div>
+        </div>
+      )}
 
       {/* Validation Results Report */}
       {currentReport && (
@@ -176,6 +226,25 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
                   <span className="font-bold block mb-1">Release Recommendation:</span>
                   <span>{currentReport.recommendation}</span>
                 </div>
+
+                <div className="mt-3 rounded-xl border border-slate-200 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-950/40">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <div className="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Release decision</div>
+                      <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                        {currentReport.release_decision === 'approved' ? 'Approved — profile promoted to Protected.' : currentReport.release_decision === 'rejected' ? 'Rejected — profile was not promoted.' : 'Pending human approval.'}
+                      </div>
+                    </div>
+                    {currentReport.release_decision === 'pending' && (
+                      <div className="flex flex-wrap gap-2">
+                        {currentReport.overall_status === 'passed' && <button type="button" onClick={() => handleReleaseDecision('approve')} disabled={releasePending} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white hover:bg-emerald-500 disabled:opacity-50">{releasePending ? 'Recording…' : 'Approve release'}</button>}
+                        <button type="button" onClick={() => handleReleaseDecision('reject')} disabled={releasePending} className="rounded-lg border border-rose-200 px-3 py-2 text-[11px] font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900/50 dark:text-rose-300 dark:hover:bg-rose-950/30">Reject release</button>
+                      </div>
+                    )}
+                  </div>
+                  <input value={releaseNote} onChange={(event) => setReleaseNote(event.target.value)} placeholder="Decision note (optional)" className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-white" />
+                  <p className="mt-2 text-[10px] text-slate-500 dark:text-slate-400">Approval records the human decision and promotes this profile; it does not automatically execute or replay an action.</p>
+                </div>
               </div>
 
               <div className="flex items-center space-x-6 self-start md:self-center">
@@ -206,9 +275,10 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
 
                 return (
                   <div key={idx} className="rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 overflow-hidden">
-                    <div 
+                    <button
+                      type="button"
                       onClick={() => setExpandedSuite(isExpanded ? -1 : idx)}
-                      className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/40 transition-all text-xs"
+                      className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-100 dark:hover:bg-slate-800/40 transition-all text-xs"
                     >
                       <div className="flex items-center space-x-3">
                         {allPassed ? (
@@ -228,7 +298,7 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
                         </span>
                         {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                       </div>
-                    </div>
+                    </button>
 
                     {isExpanded && (
                       <div className="p-4 pt-0 border-t border-slate-200 dark:border-slate-800/60 space-y-2.5 bg-white/50 dark:bg-slate-950/40">
@@ -266,50 +336,6 @@ export const ReleaseValidation: React.FC<ValidationProps> = () => {
               })}
             </div>
           </div>
-
-          {/* Historical Pre-Release Runs */}
-          {history.length > 0 && (
-            <div className="glass-panel p-6 rounded-2xl">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1 flex items-center space-x-2">
-                <History className="w-4 h-4 text-slate-400" />
-                <span>Pre-Release Validation Run History</span>
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Historical audit records stored in database</p>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
-                    <tr>
-                      <th className="py-2.5 px-3">Run ID</th>
-                      <th className="py-2.5 px-3">Agent</th>
-                      <th className="py-2.5 px-3">Version</th>
-                      <th className="py-2.5 px-3">Pre-Release Assessment</th>
-                      <th className="py-2.5 px-3">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium text-slate-700 dark:text-slate-300">
-                    {history.map((h) => (
-                      <tr key={h.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40">
-                        <td className="py-2.5 px-3 font-mono text-slate-500 dark:text-slate-400">{h.id}</td>
-                        <td className="py-2.5 px-3 font-bold text-slate-900 dark:text-white">{h.agent_name || h.agent_id}</td>
-                        <td className="py-2.5 px-3 font-mono">{h.version}</td>
-                        <td className="py-2.5 px-3">
-                          <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase ${
-                            h.status === 'passed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300'
-                          }`}>
-                            {h.status === 'passed' ? 'Passed' : 'Review Required'}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 text-slate-500 text-[11px]">
-                          {new Date(h.created_at).toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
 
         </div>
       )}

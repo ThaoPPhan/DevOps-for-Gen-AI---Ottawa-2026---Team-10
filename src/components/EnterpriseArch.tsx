@@ -43,7 +43,7 @@ export const EnterpriseArch: React.FC = () => {
                 </td>
                 <td className="py-3.5 px-4 text-brand-700 dark:text-brand-300 font-mono">Cloudflare Pages (Global CDN)</td>
                 <td className="py-3.5 px-4 text-indigo-700 dark:text-indigo-300 font-mono">Cloudflare Pages / AWS S3 + CloudFront</td>
-                <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400">Sub-50ms global access, instant telemetry visualization</td>
+                <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400">Edge-hosted access; measure performance per deployment</td>
               </tr>
               <tr className="hover:bg-slate-50 dark:hover:bg-slate-900/40">
                 <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white flex items-center space-x-2">
@@ -52,7 +52,7 @@ export const EnterpriseArch: React.FC = () => {
                 </td>
                 <td className="py-3.5 px-4 text-brand-700 dark:text-brand-300 font-mono">Cloudflare Workers / Pages Functions</td>
                 <td className="py-3.5 px-4 text-indigo-700 dark:text-indigo-300 font-mono">Cloudflare Workers + AWS Lambda</td>
-                <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400">Zero cold-start edge policy enforcement</td>
+                <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400">Deterministic policy enforcement with explicit auth and error boundaries</td>
               </tr>
               <tr className="hover:bg-slate-50 dark:hover:bg-slate-900/40">
                 <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white flex items-center space-x-2">
@@ -61,16 +61,16 @@ export const EnterpriseArch: React.FC = () => {
                 </td>
                 <td className="py-3.5 px-4 text-brand-700 dark:text-brand-300 font-mono">Cloudflare D1 (SQLite Edge DB) + KV</td>
                 <td className="py-3.5 px-4 text-indigo-700 dark:text-indigo-300 font-mono">Cloudflare D1 + AWS DynamoDB + Aurora Serverless</td>
-                <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400">ACID transaction audit logs, global policy caching</td>
+                <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400">D1 audit records with KV-backed rate limiting</td>
               </tr>
               <tr className="hover:bg-slate-50 dark:hover:bg-slate-900/40">
                 <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white flex items-center space-x-2">
                   <Radio className="w-4 h-4 text-rose-500 dark:text-rose-400" />
                   <span>Event Telemetry & Alerting</span>
                 </td>
-                <td className="py-3.5 px-4 text-brand-700 dark:text-brand-300 font-mono">D1 Event Stream + Edge Webhooks</td>
+                <td className="py-3.5 px-4 text-brand-700 dark:text-brand-300 font-mono">D1 telemetry + optional alert webhook</td>
                 <td className="py-3.5 px-4 text-indigo-700 dark:text-indigo-300 font-mono">AWS EventBridge + SNS + OpenTelemetry (OTel)</td>
-                <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400">Real-time incident dispatch, SIEM integration</td>
+                <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400">Recorded incidents with optional outbound notification</td>
               </tr>
             </tbody>
           </table>
@@ -93,8 +93,8 @@ export const EnterpriseArch: React.FC = () => {
             { step: '5', title: 'Pre-Release Validated', desc: 'Behavioral test suites verify boundaries before production release certification.' },
             { step: '6', title: 'Adversarial Attack Intercepted', desc: 'Agent encounters urgent fraudulent bank update and injected memo.' },
             { step: '7', title: 'In-Flight Gateway Evaluation', desc: 'AgenticScale Gateway intercepts action and flags REVIEW / BLOCK at edge.' },
-            { step: '8', title: 'Runbook Dispatch', desc: 'Incident created with step-by-step remediation runbook for human approver.' },
-            { step: '9', title: 'Fleet Observability', desc: 'Central dashboard aggregates safety posture across all enterprise agents.' },
+            { step: '8', title: 'Runbook & Human Decision', desc: 'Incident created with a runbook; authorized operators can acknowledge, approve, reject, or resolve it.' },
+            { step: '9', title: 'Fleet Observability', desc: 'Central dashboard aggregates D1 safety posture through short-interval polling.' },
           ].map((item) => (
             <div key={item.step} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-1.5 shadow-sm">
               <div className="flex items-center space-x-2">

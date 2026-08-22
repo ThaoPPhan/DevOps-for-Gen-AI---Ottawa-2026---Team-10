@@ -88,13 +88,16 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
         owner: profile.owner,
         purpose: profile.purpose,
         version: 'v1.0.0',
-        status: 'protected',
+        status: 'monitoring',
         risk_score: analysisResult.overall_risk_score,
         blast_radius: profile.blast_radius,
         allowed_actions: profile.allowed_actions,
         restricted_actions: profile.restricted_actions,
         required_controls: profile.required_controls,
-        max_transaction_limit: profile.max_transaction_limit
+        max_transaction_limit: profile.max_transaction_limit,
+        risk_categories: profile.risk_categories,
+        monitoring_requirements: profile.monitoring_requirements,
+        change_reason: 'Created from completed risk review; awaiting governance approval.'
       });
       if (onProfileCreated) onProfileCreated(profile);
       setActiveTab('profiles');
@@ -106,11 +109,15 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
     }
   };
 
-  const copyJson = () => {
+  const copyJson = async () => {
     if (!analysisResult) return;
-    navigator.clipboard.writeText(JSON.stringify(analysisResult.suggested_profile, null, 2));
-    setCopiedJson(true);
-    setTimeout(() => setCopiedJson(false), 2000);
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(analysisResult.suggested_profile, null, 2));
+      setCopiedJson(true);
+      setTimeout(() => setCopiedJson(false), 2000);
+    } catch {
+      setError('The browser did not allow copying the profile JSON. Use View Raw JSON to copy it manually.');
+    }
   };
 
   const getRiskLabel = (score: number, radius: string) => {
@@ -133,7 +140,7 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
       </div>
 
       {error && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-300">
+        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-300">
           {error}
         </div>
       )}
@@ -168,8 +175,9 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
         {/* Input Details */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Agent Name</label>
+            <label htmlFor="review-agent-name" className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Agent Name</label>
             <input
+              id="review-agent-name"
               type="text"
               value={agentName}
               onChange={(e) => setAgentName(e.target.value)}
@@ -178,8 +186,9 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Owning Team / Department</label>
+            <label htmlFor="review-owner" className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Owning Team / Department</label>
             <input
+              id="review-owner"
               type="text"
               value={owner}
               onChange={(e) => setOwner(e.target.value)}
@@ -190,10 +199,11 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
         </div>
 
         <div>
-          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+          <label htmlFor="review-description" className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
             Agent Description & Intended Capabilities
           </label>
           <textarea
+            id="review-description"
             rows={3}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -345,7 +355,7 @@ export const RiskReview: React.FC<RiskReviewProps> = ({ setActiveTab, onProfileC
                   <FileText className="w-4 h-4 text-brand-600 dark:text-brand-400" />
                   <span>Synthesized Safety Profile</span>
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Structured governance specification ready for active protection</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Structured governance specification ready for registration. New profiles enter Monitoring until validation and human release approval are complete.</p>
               </div>
 
               <div className="flex items-center space-x-2">

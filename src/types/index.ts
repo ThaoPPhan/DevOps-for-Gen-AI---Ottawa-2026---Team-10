@@ -11,6 +11,10 @@ export interface Agent {
   restricted_actions: string[];
   required_controls: string[];
   max_transaction_limit: number;
+  risk_categories?: string[];
+  monitoring_requirements?: string[];
+  archived_at?: string | null;
+  change_reason?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -51,8 +55,13 @@ export interface Incident {
   summary: string;
   runbook_steps: string[];
   status: 'open' | 'acknowledged' | 'resolved';
+  resolution?: 'acknowledged' | 'approved' | 'rejected' | 'resolved' | 'resolve' | null;
+  resolution_note?: string | null;
+  resolved_by?: string | null;
+  resolved_at?: string | null;
   action_name?: string;
   target_resource?: string;
+  decision?: 'ALLOW' | 'REVIEW' | 'BLOCK';
   created_at: string;
 }
 
@@ -62,6 +71,7 @@ export interface DashboardStats {
     protected: number;
     monitoring: number;
     at_risk: number;
+    quarantined: number;
   };
   telemetry: {
     total_events: number;

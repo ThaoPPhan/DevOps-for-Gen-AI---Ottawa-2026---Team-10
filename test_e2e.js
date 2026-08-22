@@ -102,7 +102,7 @@ async function runTests() {
       owner: generatedProfile.owner || 'Procurement Ops',
       purpose: generatedProfile.purpose || 'Autonomous procurement workflow',
       version: 'v1.0.0',
-      status: 'protected',
+      status: 'monitoring',
       risk_score: 45,
       blast_radius: generatedProfile.blast_radius || 'high',
       allowed_actions: generatedProfile.allowed_actions || ['read_contract', 'extract_terms'],
@@ -128,7 +128,15 @@ async function runTests() {
     if (agent.id !== newAgentId) throw new Error(`Agent ID mismatch`);
   });
 
+  await test(`GET /api/agents/${newAgentId}/history`, async () => {
+    const res = await fetch(`${BASE_URL}/api/agents/${newAgentId}/history`);
+    if (!res.ok) throw new Error(`Status ${res.status}`);
+    const history = await res.json();
+    if (!Array.isArray(history) || history.length < 1) throw new Error(`Expected profile version history`);
+  });
+
   // 7. Module 3: Pre-Release Behavioral Validation Suite
+  let validationRunId = null;
   await test('POST /api/validate (Behavioral Test Suite)', async () => {
     const payload = {
       agent_id: newAgentId,
@@ -144,6 +152,22 @@ async function runTests() {
     const data = await res.json();
     if (!data.run_id || !data.suites || !data.overall_status) {
       throw new Error(`Invalid validation report`);
+    }
+    validationRunId = data.run_id;
+    if (data.total_tests !== 9) throw new Error(`Expected 9 validation scenarios, got ${data.total_tests}`);
+  });
+
+  await test('POST /api/validate/:id/release -> approve passed run', async () => {
+    if (!validationRunId) throw new Error('Validation run was not created');
+    const res = await fetch(`${BASE_URL}/api/validate/${validationRunId}/release`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision: 'approve', note: 'Automated E2E verification approval.' })
+    });
+    if (!res.ok) throw new Error(`Status ${res.status}`);
+    const data = await res.json();
+    if (data.release_decision !== 'approved' || data.agent_status !== 'protected') {
+      throw new Error(`Unexpected release decision: ${JSON.stringify(data)}`);
     }
   });
 
@@ -201,6 +225,39 @@ async function runTests() {
     if (!data.runbook_steps || data.runbook_steps.length === 0) {
       throw new Error(`Missing automated runbook in incident creation`);
     }
+    reviewIncidentId = data.incident_id;
+  });
+
+  await test('POST /api/gateway/evaluate -> REVIEW (Missing information)', async () => {
+    const res = await fetch(`${BASE_URL}/api/gateway/evaluate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        agent_id: 'agent-invoice-01',
+        action_name: 'send_payment',
+        target_resource: 'wire_gateway:missing-fields',
+        payload: { required_fields_missing: true, missing_required_fields: ['amount', 'vendor_id'] }
+      })
+    });
+    if (!res.ok) throw new Error(`Status ${res.status}`);
+    const data = await res.json();
+    if (data.decision !== 'REVIEW') throw new Error(`Expected REVIEW, got ${data.decision}`);
+  });
+
+  await test('POST /api/gateway/evaluate -> REVIEW (Suspicious anomaly)', async () => {
+    const res = await fetch(`${BASE_URL}/api/gateway/evaluate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        agent_id: 'agent-fraud-02',
+        action_name: 'inspect_transaction',
+        target_resource: 'ledger://suspicious',
+        payload: { anomaly_score: 0.92, suspicious: true }
+      })
+    });
+    if (!res.ok) throw new Error(`Status ${res.status}`);
+    const data = await res.json();
+    if (data.decision !== 'REVIEW') throw new Error(`Expected REVIEW, got ${data.decision}`);
   });
 
   // 11. Runtime Gateway Evaluation (Scenario 3: BLOCKED / Threat)
@@ -261,6 +318,18 @@ async function runTests() {
     if (!res.ok) throw new Error(`Status ${res.status}`);
     const incidents = await res.json();
     if (!Array.isArray(incidents)) throw new Error(`Expected incidents array`);
+  });
+
+  await test('POST /api/incidents/:id/action -> reject held action', async () => {
+    if (!reviewIncidentId) throw new Error('Review incident was not created');
+    const res = await fetch(`${BASE_URL}/api/incidents/${reviewIncidentId}/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reject', note: 'Automated E2E verification rejection.' })
+    });
+    if (!res.ok) throw new Error(`Status ${res.status}`);
+    const data = await res.json();
+    if (data.resolution !== 'rejected') throw new Error(`Unexpected resolution: ${JSON.stringify(data)}`);
   });
 
   console.log(`\n========================================`);

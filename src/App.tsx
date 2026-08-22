@@ -8,6 +8,7 @@ import { RuntimeSimulation } from './components/RuntimeSimulation';
 import { EnterpriseArch } from './components/EnterpriseArch';
 import { ApiDocs } from './components/ApiDocs';
 import { ShieldCheck, AlertTriangle, RefreshCw } from 'lucide-react';
+import { getAdminKey, setAdminKey } from './services/api';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -40,9 +41,9 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
             <div className="w-12 h-12 rounded-full bg-rose-500/20 text-rose-500 mx-auto flex items-center justify-center border border-rose-500/30">
               <AlertTriangle className="w-6 h-6" />
             </div>
-            <h2 className="text-xl font-bold">Rendering Recovered</h2>
-            <p className="text-xs text-slate-600 dark:text-slate-400 font-mono bg-slate-100 dark:bg-slate-900 p-3 rounded text-left overflow-x-auto">
-              {this.state.error?.message || 'An unexpected error occurred during rendering'}
+            <h2 className="text-xl font-bold">Something went wrong</h2>
+            <p className="text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-900 p-3 rounded text-left overflow-x-auto">
+              The platform hit an unexpected display error. Reload to try the page again.
             </p>
             <button
               onClick={() => {
@@ -63,7 +64,28 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 }
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const routeToTab: Record<string, string> = {
+    '/': 'dashboard',
+    '/dashboard': 'dashboard',
+    '/review': 'review',
+    '/profile': 'profiles',
+    '/profiles': 'profiles',
+    '/validate': 'validate',
+    '/simulate': 'simulate',
+    '/enterprise': 'enterprise',
+    '/api-docs': 'api'
+  };
+  const tabToRoute: Record<string, string> = {
+    dashboard: '/',
+    review: '/review',
+    profiles: '/profile',
+    validate: '/validate',
+    simulate: '/simulate',
+    enterprise: '/enterprise',
+    api: '/api-docs'
+  };
+  const [activeTab, setActiveTabState] = useState<string>(() => routeToTab[window.location.pathname] || 'dashboard');
+  const [adminKey, setAdminKeyState] = useState<string>(() => getAdminKey());
   const [isDark, setIsDark] = useState<boolean>(() => {
     const stored = localStorage.getItem('agenticscale_theme');
     return stored === 'dark';
@@ -79,6 +101,24 @@ export function App() {
     }
   }, [isDark]);
 
+  useEffect(() => {
+    const onPopState = () => setActiveTabState(routeToTab[window.location.pathname] || 'dashboard');
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const setActiveTab = (tab: string) => {
+    const nextPath = tabToRoute[tab] || '/';
+    if (window.location.pathname !== nextPath) window.history.pushState({}, '', nextPath);
+    setActiveTabState(tab);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleAdminKey = (key: string) => {
+    setAdminKey(key);
+    setAdminKeyState(key.trim());
+  };
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-between selection:bg-brand-500 selection:text-white transition-colors duration-150">
@@ -86,9 +126,11 @@ export function App() {
         {/* Top Navbar */}
         <Navbar 
           activeTab={activeTab} 
-          setActiveTab={setActiveTab} 
+          setActiveTab={setActiveTab}
           isDark={isDark}
           setIsDark={setIsDark}
+          adminAuthenticated={Boolean(adminKey)}
+          onAdminKeyChange={handleAdminKey}
         />
 
         {/* Main Content View */}

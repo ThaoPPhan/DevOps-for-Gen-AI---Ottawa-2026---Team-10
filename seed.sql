@@ -114,6 +114,11 @@ VALUES
     1
 );
 
+UPDATE agents SET risk_categories = '["financial_transaction", "sensitive_data", "vendor_mutation"]', monitoring_requirements = '["audit_logging", "human_approval_over_5k", "vendor_bank_change_dual_control"]' WHERE id = 'agent-invoice-01';
+UPDATE agents SET risk_categories = '["financial_transaction", "suspicious_activity", "irreversible_action"]', monitoring_requirements = '["immutable_audit_trail", "realtime_telemetry", "dual_custody_for_unfreeze"]' WHERE id = 'agent-fraud-02';
+UPDATE agents SET risk_categories = '["sensitive_data", "external_communication"]', monitoring_requirements = '["pii_redaction_mask", "max_credit_cap_50", "sentiment_escalation"]' WHERE id = 'agent-support-01';
+UPDATE agents SET risk_categories = '["administrative_access", "irreversible_action"]', monitoring_requirements = '["break_glass_approval", "canary_validation", "rollback_lock"]' WHERE id = 'agent-devops-01';
+
 -- Validation Runs
 INSERT OR REPLACE INTO validation_runs (id, agent_id, version, status, total_tests, passed_tests, failed_tests, safety_score, recommendation, details_json, created_at)
 VALUES
