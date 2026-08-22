@@ -155,11 +155,12 @@ Configure production secrets with Wrangler (never commit them):
 ```bash
 npx wrangler secret put ADMIN_API_KEY
 npx wrangler secret put GATEWAY_API_KEY
+npx wrangler pages secret put AUTH_SESSION_SECRET --project-name agenticscale
 # Optional incident notifications
 npx wrangler secret put ALERT_WEBHOOK_URL
 ```
 
-The prototype opens in a public demo mode so visitors can see the full workflow before signing in. Unauthenticated requests are scoped to the seeded `AgenticScale Demo Organization`; the demo role is read-only for workspace changes, while the gateway simulator can generate demo telemetry. Organization users sign in through Cloudflare Access at `agenticscale.cloudflareaccess.com`, and authenticated requests are scoped to their organization membership. Set `AUTH_REQUIRED` to `true` for a production deployment that should require login before any workspace API is served. External gateway callers require `GATEWAY_API_KEY`.
+The prototype opens in a public demo mode so visitors can see the full workflow before signing in. Unauthenticated requests are scoped to the seeded `AgenticScale Demo Organization`; the demo role is read-only for workspace changes, while the gateway simulator can generate demo telemetry. Organization users sign in through Cloudflare Access at `agenticscale.cloudflareaccess.com`; after Access succeeds, AgenticScale issues its own signed session cookie so the public session endpoint can recognize the user without making the main site private. Authenticated requests are scoped to the organization membership. Set `AUTH_REQUIRED` to `true` for a production deployment that should require login before any workspace API is served. External gateway callers require `GATEWAY_API_KEY`.
 
 ### Python Example
 ```python

@@ -16,6 +16,7 @@ export interface Env {
   AUTH_DOMAIN?: string;
   AUTH_TEAM_DOMAIN?: string;
   AUTH_PROVIDER?: string;
+  AUTH_SESSION_SECRET?: string;
 }
 
 type JsonObject = Record<string, unknown>;
@@ -44,8 +45,18 @@ interface AuthContext {
   organizationId: string;
   organizationName: string;
   role: keyof typeof ROLE_ORDER;
-  source: 'cloudflare_access' | 'api-key' | 'development' | 'demo';
+  source: 'cloudflare_access' | 'session' | 'api-key' | 'development' | 'demo';
 }
+
+interface SessionPayload {
+  subject: string;
+  email: string;
+  name: string;
+  expiresAt: number;
+}
+
+const SESSION_COOKIE = 'AgenticScaleSession';
+const SESSION_TTL_SECONDS = 60 * 60 * 24;
 
 function isAllowedOrigin(origin: string): boolean {
   return ALLOWED_ORIGINS.has(origin) || /^https:\/\/[a-z0-9-]+\.agenticscale\.pages\.dev$/i.test(origin);
@@ -66,6 +77,66 @@ function timingSafeEqual(left: string, right: string): boolean {
   }
 
   return result === 0;
+}
+
+function base64UrlEncode(value: Uint8Array): string {
+  let binary = '';
+  for (const byte of value) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function base64UrlDecode(value: string): Uint8Array {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (value.length % 4)) % 4);
+  const binary = atob(normalized);
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+
+async function sessionSignature(data: string, secret: string, mode: 'sign' | 'verify', signature?: Uint8Array): Promise<Uint8Array | boolean> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign', 'verify']
+  );
+  const bytes = new TextEncoder().encode(data);
+  if (mode === 'sign') return new Uint8Array(await crypto.subtle.sign('HMAC', key, bytes));
+  return Boolean(signature && await crypto.subtle.verify('HMAC', key, signature as unknown as BufferSource, bytes));
+}
+
+async function createSessionToken(auth: AuthContext, secret: string): Promise<string> {
+  const payload: SessionPayload = {
+    subject: auth.subject,
+    email: auth.email,
+    name: auth.name,
+    expiresAt: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS
+  };
+  const encodedPayload = base64UrlEncode(new TextEncoder().encode(JSON.stringify(payload)));
+  const signature = await sessionSignature(encodedPayload, secret, 'sign') as Uint8Array;
+  return `${encodedPayload}.${base64UrlEncode(signature)}`;
+}
+
+async function readSessionToken(request: Request, secret: string | undefined): Promise<SessionPayload | null> {
+  if (!secret) return null;
+  const cookieHeader = request.headers.get('Cookie') || '';
+  const cookie = cookieHeader.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${SESSION_COOKIE}=`));
+  if (!cookie) return null;
+  const token = cookie.slice(`${SESSION_COOKIE}=`.length);
+  const [encodedPayload, encodedSignature] = token.split('.');
+  if (!encodedPayload || !encodedSignature) return null;
+  try {
+    const valid = await sessionSignature(encodedPayload, secret, 'verify', base64UrlDecode(encodedSignature)) as boolean;
+    if (!valid) return null;
+    const payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(encodedPayload))) as SessionPayload;
+    if (!payload.subject || !payload.email || !payload.expiresAt || payload.expiresAt <= Math.floor(Date.now() / 1000)) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function sessionCookie(value: string, maxAge: number): string {
+  return `${SESSION_COOKIE}=${value}; Max-Age=${maxAge}; Path=/; Secure; HttpOnly; SameSite=Lax`;
 }
 
 function presentedApiKey(request: Request): string {
@@ -122,7 +193,33 @@ async function resolveAuth(c: any): Promise<AuthContext | null> {
   const accessEmail = request.headers.get('Cf-Access-Authenticated-User-Email') || '';
   const accessSubject = request.headers.get('Cf-Access-User-ID') || request.headers.get('Cf-Access-Authenticated-User-ID') || accessEmail;
   const accessName = request.headers.get('Cf-Access-Authenticated-User-Name') || accessEmail;
-  if (!accessEmail) return isAuthRequired(env) ? null : demoAuthContext('demo');
+  if (!accessEmail) {
+    const session = await readSessionToken(request, env.AUTH_SESSION_SECRET);
+    if (session) {
+      const sessionUser = await env.DB.prepare(`
+        SELECT u.id as user_id, u.subject, u.email, u.name, o.id as organization_id, o.name as organization_name, m.role
+        FROM users u
+        JOIN organization_memberships m ON m.user_id = u.id
+        JOIN organizations o ON o.id = m.organization_id
+        WHERE u.subject = ? OR lower(u.email) = lower(?)
+        ORDER BY CASE m.role WHEN 'owner' THEN 4 WHEN 'admin' THEN 3 WHEN 'operator' THEN 2 ELSE 1 END DESC
+        LIMIT 1
+      `).bind(session.subject, session.email).first<any>();
+      if (sessionUser) {
+        return {
+          userId: sessionUser.user_id,
+          subject: sessionUser.subject,
+          email: sessionUser.email,
+          name: session.name || sessionUser.name || sessionUser.email,
+          organizationId: sessionUser.organization_id,
+          organizationName: sessionUser.organization_name,
+          role: sessionUser.role,
+          source: 'session'
+        };
+      }
+    }
+    return isAuthRequired(env) ? null : demoAuthContext('demo');
+  }
   if (isAuthRequired(env) && host !== (env.AUTH_DOMAIN || 'agenticscale.org')) return null;
 
   const user: any = await env.DB.prepare(`
@@ -375,6 +472,7 @@ app.get('/api/auth/session', async (c) => {
 });
 
 app.get('/api/auth/login', async (c) => {
+  const auth = c.get('auth') as AuthContext | null;
   const returnTo = c.req.query('returnTo') || '/';
   const safeReturnTo = returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/';
   // Cloudflare Access protects this route and owns the challenge. Once Access
@@ -383,6 +481,9 @@ app.get('/api/auth/login', async (c) => {
   // so creates a loop when a visitor has a stale/expired Access cookie or is
   // authenticated by Access but is not yet provisioned in our membership table.
   c.header('Cache-Control', 'no-store');
+  if (auth?.source === 'cloudflare_access' && c.env.AUTH_SESSION_SECRET) {
+    c.header('Set-Cookie', sessionCookie(await createSessionToken(auth, c.env.AUTH_SESSION_SECRET), SESSION_TTL_SECONDS));
+  }
   return c.redirect(safeReturnTo, 302);
 });
 
@@ -390,6 +491,7 @@ app.get('/api/auth/logout', async (c) => {
   const requestOrigin = new URL(c.req.url).origin;
   const returnTo = encodeURIComponent(`${requestOrigin}/`);
   if (isLocalRequest(c.req.raw)) return c.redirect('/', 302);
+  c.header('Set-Cookie', sessionCookie('', 0));
   const teamOrigin = `https://${c.env.AUTH_TEAM_DOMAIN || 'agenticscale.cloudflareaccess.com'}`;
   return c.redirect(`${teamOrigin}/cdn-cgi/access/logout?redirect_url=${returnTo}`, 302);
 });
