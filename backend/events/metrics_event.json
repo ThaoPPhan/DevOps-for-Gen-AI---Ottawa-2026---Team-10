@@ -1,0 +1,24 @@
+{
+  "body": null,
+  "resource": "/metrics",
+  "path": "/metrics",
+  "httpMethod": "GET",
+  "isBase64Encoded": false,
+  "queryStringParameters": null,
+  "pathParameters": null,
+  "stageVariables": null,
+  "headers": {},
+  "requestContext": {
+    "accountId": "123456789012",
+    "stage": "prod",
+    "requestId": "test-request-id",
+    "identity": {
+      "sourceIp": "127.0.0.1"
+    },
+    "path": "/prod/metrics",
+    "resourcePath": "/metrics",
+    "httpMethod": "GET",
+    "apiId": "1234567890",
+    "protocol": "HTTP/1.1"
+  }
+}

@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: |
+  Hello World AWS Lambda and Amazon API Gateway REST API
+  Sample AWS SAM template to create a simple Lambda function connected to a REST API.
+
+Globals:
+  Function:
+    Timeout: 30
+
+Resources:
+  TransactionsTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: Transactions
+      PrimaryKey:
+        Name: transaction_id
+        Type: String
+
+  HelloWorldFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: hello_world/
+      Handler: app.lambda_handler
+      Runtime: python3.14
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          TRANSACTION_TABLE: !Ref TransactionsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TransactionsTable
+      Events:
+        Transaction:
+          Type: Api
+          Properties:
+            Path: /transaction
+            Method: post
+        Metrics:
+          Type: Api
+          Properties:
+            Path: /metrics
+            Method: get
+        ModelStatus:
+          Type: Api
+          Properties:
+            Path: /model-status
+            Method: get
+        Deploy:
+          Type: Api
+          Properties:
+            Path: /deploy
+            Method: post
+        SimulateFailure:
+          Type: Api
+          Properties:
+            Path: /simulate-failure
+            Method: post
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL (Prod stage)
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod
+  HelloWorldFunction:
+    Description: Lambda Function ARN
+    Value: !GetAtt HelloWorldFunction.Arn
+  HelloWorldFunctionIamRole:
+    Description: Implicit IAM Role created for the function
+    Value: !GetAtt HelloWorldFunctionRole.Arn

@@ -1,0 +1,26 @@
+{
+  "body": "{\"user_id\": \"12345\", \"amount\": 250.50, \"merchant\": \"Amazon\", \"country\": \"CA\"}",
+  "resource": "/transaction",
+  "path": "/transaction",
+  "httpMethod": "POST",
+  "isBase64Encoded": false,
+  "queryStringParameters": null,
+  "pathParameters": null,
+  "stageVariables": null,
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "requestContext": {
+    "accountId": "123456789012",
+    "stage": "prod",
+    "requestId": "test-request-id",
+    "identity": {
+      "sourceIp": "127.0.0.1"
+    },
+    "path": "/prod/transaction",
+    "resourcePath": "/transaction",
+    "httpMethod": "POST",
+    "apiId": "1234567890",
+    "protocol": "HTTP/1.1"
+  }
+}

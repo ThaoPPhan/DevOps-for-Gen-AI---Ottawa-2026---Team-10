@@ -1,0 +1,19 @@
+{
+  "body": "{\"failure_type\": \"error\"}",
+  "resource": "/simulate-failure",
+  "path": "/simulate-failure",
+  "httpMethod": "POST",
+  "isBase64Encoded": false,
+  "headers": {"Content-Type": "application/json"},
+  "requestContext": {
+    "accountId": "123456789012",
+    "stage": "prod",
+    "requestId": "test-request-id",
+    "identity": {"sourceIp": "127.0.0.1"},
+    "path": "/prod/simulate-failure",
+    "resourcePath": "/simulate-failure",
+    "httpMethod": "POST",
+    "apiId": "1234567890",
+    "protocol": "HTTP/1.1"
+  }
+}
